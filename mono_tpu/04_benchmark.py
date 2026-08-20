@@ -356,7 +356,7 @@ def eval_f32_tflite(tflite_path, samples):
 
 
 # ─────────────────────────────────────────────
-# Latence
+# Latency
 # ─────────────────────────────────────────────
 
 def measure_lat(interp, warmup, runs, seed=0):
@@ -619,7 +619,7 @@ def measure_cpu(cfg, samples_for_acc, warmup, runs, fp32_acc=None):
     import tflite_runtime.interpreter as tfl
     out = {}
 
-    print("  [CPU INT8] Latence...")
+    print("  [CPU INT8] Latency...")
     ci = tfl.Interpreter(model_path=cfg["int8_path"])
     ci.allocate_tensors()
     cl = measure_lat(ci, warmup, runs)
@@ -665,7 +665,7 @@ def measure_cpu(cfg, samples_for_acc, warmup, runs, fp32_acc=None):
                   f"[{acc['top1_ci95_lo']:.2f}, {acc['top1_ci95_hi']:.2f}]  "
                   f"Top-5: {acc['top5_pct']:.2f}%")
 
-        print("  [CPU FP32] Latence...")
+        print("  [CPU FP32] Latency...")
         cf = tfl.Interpreter(model_path=cfg["f32_path"])
         cf.allocate_tensors()
         fl = measure_lat(cf, warmup, runs)
@@ -715,7 +715,7 @@ def measure_tpu(cfg, samples_for_acc, warmup, runs):
           f"[{acc['top1_ci95_lo']:.2f}, {acc['top1_ci95_hi']:.2f}]  "
           f"Top-5: {acc['top5_pct']:.2f}%")
 
-    print("  [TPU INT8] Latence...")
+    print("  [TPU INT8] Latency...")
     tl = measure_lat(ti, warmup, runs)
     out["lat_tpu_int8_ms_mean"] = tl["mean"]
     out["lat_tpu_int8_ms_std"] = tl["std"]
@@ -1086,7 +1086,7 @@ def main():
         tmp = tfl.Interpreter(model_path=cfg["int8_path"]); tmp.allocate_tensors()
         in_size = tmp.get_input_details()[0]["shape"][1]
         del tmp
-        print(f"  Chargement val ({in_size}×{in_size})...")
+        print(f"  Loading evaluation set ({in_size}x{in_size})...")
         samples = prepare_val_samples(args.data_dir, in_size, num_images)
         print(f"  {len(samples)} images")
 

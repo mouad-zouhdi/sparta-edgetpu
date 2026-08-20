@@ -13,9 +13,11 @@
   "groups": {
     "axis1 baselines (pytorch)": {
       "patterns": [
-        "/home/a131/Desktop/Project/data/models/models/*.pt"
+        "/home/a131/Desktop/Project/data/models/models/*.pt",
+        "/home/a131/Desktop/Project/data/models/models/*.train.json"
       ],
-      "dest": "axis1_cifar100/baselines"
+      "dest": "axis1_cifar100/baselines",
+      "_comment": "The baseline checkpoints, plus the .train.json written alongside each one: the recipe used, the best epoch, and the full per-epoch accuracy curve. They are a few hundred KB and are the only record of how the baselines were obtained."
     },
     "axis1 pruned (pytorch)": {
       "patterns": [

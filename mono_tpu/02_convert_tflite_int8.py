@@ -444,7 +444,7 @@ def convert_model(name, pt_path, input_size, data_dir, num_calib, force=False, c
         print(f"    Already converted: {name}_int8.tflite, skipping.")
         return True
 
-    print(f"    Chargement {pt_path}...")
+    print(f"    Loading {pt_path}...")
     model = torch.load(str(pt_path), map_location="cpu", weights_only=False)
     model.eval()
     if hasattr(model, "aux_logits"):

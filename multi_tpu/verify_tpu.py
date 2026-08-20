@@ -293,7 +293,7 @@ def verify_model(name: str, cfg: dict, n_inputs: int, runs: int, warmup: int) ->
         })
         raw_diffs_int8.append(np.abs(y_cpu_raw.astype(int) - y_tpu_raw.astype(int)).max())
 
-    # Latence (1 input fixe, warmup + runs)
+    # Latency: one fixed input, warmup then timed runs
     x_lat = np.expand_dims(preprocess(raw[0], cfg), 0)
     lat_cpu = time_inferences(cpu, x_lat, warmup, runs)
     lat_tpu = time_inferences(tpu, x_lat, warmup, runs)
@@ -337,7 +337,7 @@ def main():
     print("EDGE TPU VERIFICATION")
     print(f"  Models     : {names}")
     print(f"  N inputs   : {args.n_inputs} (output consistency)")
-    print(f"  Latence    : warmup={args.warmup}, runs={args.runs}")
+    print(f"  Latency    : warmup={args.warmup}, runs={args.runs}")
     print("=" * 78)
 
     report = {"models": {}, "summary": {}}
@@ -354,9 +354,9 @@ def main():
             print(f"  top5 overlap: {r['top5_overlap_mean']:.2f}/5 (mean over {args.n_inputs} inputs)")
             print(f"  cos(CPU,TPU): mean={r['cos_cpu_tpu_mean']:.6f}  min={r['cos_cpu_tpu_min']:.6f}")
             print(f"  max |Δ int8|: overall={r['max_abs_diff_int8_overall']}  mean={r['max_abs_diff_int8_mean']:.2f}")
-            print(f"  latence CPU : {r['latency_cpu_int8']['mean_ms']:7.2f} ms  "
+            print(f"  CPU latency : {r['latency_cpu_int8']['mean_ms']:7.2f} ms  "
                   f"(med {r['latency_cpu_int8']['median_ms']:.2f}, p95 {r['latency_cpu_int8']['p95_ms']:.2f})")
-            print(f"  latence TPU : {r['latency_tpu_edgetpu']['mean_ms']:7.2f} ms  "
+            print(f"  TPU latency : {r['latency_tpu_edgetpu']['mean_ms']:7.2f} ms  "
                   f"(med {r['latency_tpu_edgetpu']['median_ms']:.2f}, p95 {r['latency_tpu_edgetpu']['p95_ms']:.2f})")
             print(f"  speedup     : {r['tpu_speedup_vs_cpu_int8']:.2f}×")
         else:

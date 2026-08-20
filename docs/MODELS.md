@@ -3,7 +3,7 @@
 Every model measured with this framework is published at
 **https://huggingface.co/mouad-zouhdi/sparta-edgetpu-models**
 
-37.38 GiB across 7479 files, which is why it is hosted there rather than in this
+37.38 GiB across 7486 files, which is why it is hosted there rather than in this
 repository.
 
 ## Downloading
@@ -61,7 +61,7 @@ GPU-hours.
 
 | Path | Files | Size | What it is |
 |---|---:|---:|---|
-| `axis1_cifar100/baselines/` | 7 | 0.38 GiB | CIFAR-100 baselines, PyTorch |
+| `axis1_cifar100/baselines/` | 14 | 0.38 GiB | CIFAR-100 baselines, PyTorch, with their training logs |
 | `axis1_cifar100/pruned_pytorch/` | 405 | 11.37 GiB | pruned and recovered, PyTorch |
 | `axis1_cifar100/tflite_int8/` | 411 | 2.97 GiB | quantized, before compilation |
 | `axis1_cifar100/edgetpu/` | 410 | 3.20 GiB | compiled binaries, the ones benchmarked |
@@ -75,7 +75,7 @@ GPU-hours.
 | `synthetic/compile_reports/` | 2456 | 12 MiB | per (model, N) compiler reports |
 | `measurements/` | 21 | 0.12 GiB | every benchmark CSV, with a README describing each |
 
-Total: 7479 files, 37.38 GiB.
+Total: 7486 files, 37.38 GiB.
 
 ### axis1_cifar100
 

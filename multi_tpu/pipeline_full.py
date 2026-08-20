@@ -398,7 +398,7 @@ def main():
             "segments_produced": report["num_segments_produced"],
             "on_chip_mb": on_chip,
             "off_chip_mb": off_chip,
-            "duration_s_prune": dur,  # approximatif : mesure du dernier subprocess
+            "duration_s_prune": dur,  # approximate: the last subprocess's own measurement
         }
         session_summary["iterations"].append(iter_record)
         save_session()
