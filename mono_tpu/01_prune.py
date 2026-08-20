@@ -1255,7 +1255,7 @@ def main():
     parser.add_argument("--final_epochs", type=int, default=None,
                         help="Override the recovery fine-tuning epochs (default 100, PruningBench)")
     parser.add_argument("--sparsity_epochs", type=int, default=None,
-                        help="Override le nb d'epochs de sparsity learning pour bn_scale "
+                        help="Override the sparsity-learning epochs used by bn_scale "
                              "(default 100, PruningBench). Lower it for smoke tests.")
     parser.add_argument("--dd_batches", type=int, default=None,
                         help="Override the number of gradient batches used by the data-driven "
@@ -1350,7 +1350,7 @@ def main():
               f"({r['param_reduction_pct']:.1f}% params, "
               f"Δacc={r['acc_delta']:+.2f})")
     if all_results:
-        # Strip ft_history pour le summary global (volume)
+        # Drop ft_history from the global summary: it is per-epoch and would dominate the file
         log_path = LOG_DIR / "pruning_summary.json"
         existing = []
         if log_path.exists():

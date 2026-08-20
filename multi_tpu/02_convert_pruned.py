@@ -89,7 +89,10 @@ def _list_imagenet_train_images(data_dir: str, n: int, seed: int = 42):
 
 
 def _load_and_preprocess(path: str, cfg: dict) -> np.ndarray:
-    """Charge une image, resize + preprocess selon `cfg` → NHWC float32."""
+    """Load one image, resize it, and apply this model's preprocessing convention.
+
+    Returns NHWC float32. `cfg` comes from model_zoo.get_preprocessing().
+    """
     size = cfg["input_size"]
     with Image.open(path) as img:
         img = img.convert("RGB")
@@ -268,7 +271,7 @@ def main():
     p.add_argument("--data_dir", required=True,
                    help="Root ImageNet (contient train/) pour calibration")
     p.add_argument("--output_dir", required=True,
-                   help="Dossier de sortie pour le .tflite int8")
+                   help="Output directory for the INT8 .tflite")
     p.add_argument("--num_calib", type=int, default=100)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--staging_dir", default=None,

@@ -156,7 +156,10 @@ def ft_budget_for(actual_pct: float) -> tuple[int, int]:
 
 
 def infer_num_segments(target_mb: float) -> int:
-    """Devine le nombre de segments depuis target_mb (arrondi au plus proche)."""
+    """Derive the segment count from the size target, at about 8 MB of SRAM per TPU.
+
+    A target of N x 8 MB needs N segments to be held on-chip across N devices.
+    """
     key = int(round(target_mb))
     if key in DEFAULT_SEG_MAP:
         return DEFAULT_SEG_MAP[key]
@@ -202,7 +205,7 @@ def main():
                    help="Root ImageNet (contient train/ et val/)")
     # Cible + segments
     p.add_argument("--target_mb", type=float, required=True,
-                   help="Cible haute de taille TFLite int8 en MB (8/16/32/64)")
+                   help="Upper INT8 size target in MB (8/16/32/64), one per multi-TPU configuration")
     p.add_argument("--num_segments", type=int, default=None,
                    help="Edge TPU segment count (default derived from the target: 8->1, 16->2, 32->4, 64->8)")
     p.add_argument("--target_start_offset", type=float, default=0.1,
@@ -307,7 +310,8 @@ def main():
         print(f"  ITERATION {it}/{args.max_iters}  --  target_mb = {current_tm:.2f}")
         print(f"{'#' * 72}", flush=True)
 
-        # Nommage : suffixe iterN pour distinguer les tentatives
+        # Name each attempt with an iterN suffix, so the loop's successive candidates
+        # remain distinguishable after the fact
         iter_tag = f"iter{it}"
         preft_path = pruned_dir / (
             f"{args.model}_{args.importance}_{run_id}_{current_tm:.2f}mb"
@@ -462,7 +466,7 @@ def main():
         print(f"\n  [budget FT] actual_pct = {actual_pct:.2f}%  →  "
               f"{ft_epochs} epochs, warmup {warmup_epochs}", flush=True)
 
-    # ─── [4] Recovery FT depuis le PREFT gagnant ─────────────────────
+    # --- [4] Recovery fine-tuning, from the PREFT that won the loop ------
     print(f"\n{'═' * 72}")
     print(f"  RECOVERY FT — depuis {winning_preft.name}")
     print(f"{'═' * 72}", flush=True)

@@ -189,11 +189,11 @@ def main():
     parser.add_argument("--models", nargs="+", default=None,
                         help="Filtre par nom de base (correspondance partielle)")
     parser.add_argument("--tflite-dir", type=Path, default=DEFAULT_TFLITE_DIR,
-                        help=f"Dossier source des .tflite int8 (def: {DEFAULT_TFLITE_DIR})")
+                        help=f"Source directory of INT8 .tflite files (default: {DEFAULT_TFLITE_DIR})")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
-                        help=f"Dossier de sortie des .tflite Edge TPU (def: {DEFAULT_OUTPUT_DIR})")
+                        help=f"Output directory for the compiled binaries (default: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("--report-file", type=Path, default=None,
-                        help="Fichier rapport texte (def: <output-dir>/../compilation_report.txt)")
+                        help="Text report file (default: <output-dir>/../compilation_report.txt)")
     parser.add_argument("--metrics-file", type=Path, default=None,
                         help="JSON metrics file (default: <output-dir>/../compiler_metrics.json)")
     parser.add_argument("--force", action="store_true",
@@ -213,12 +213,12 @@ def main():
     print("SPARTA — COMPILATION EDGE TPU")
     print("=" * 70)
     print(f"Source : {TFLITE_DIR}")
-    print(f"Sortie : {OUTPUT_DIR}")
-    print(f"Rapport: {REPORT_FILE}")
+    print(f"Output : {OUTPUT_DIR}")
+    print(f"Report : {REPORT_FILE}")
     print(f"Metrics: {METRICS_FILE}\n")
 
     if not TFLITE_DIR.exists():
-        print(f"[ERREUR] {TFLITE_DIR} introuvable."); return
+        print(f"[ERROR] {TFLITE_DIR} not found."); return
 
     files = sorted(TFLITE_DIR.glob("*.tflite"))
     if args.models:
@@ -267,7 +267,7 @@ def main():
     header = (f"{'Model':<55s} {'TPU':>5s} {'CPU':>5s} "
               f"{'%TPU':>5s} {'SRAM':>8s} {'Stream':>8s} {'SubG':>5s}")
     sep = "-" * len(header)
-    print(f"\n{'='*70}\nRAPPORT\n{'='*70}")
+    print(f"\n{'='*70}\nREPORT\n{'='*70}")
     print(header); print(sep)
 
     with open(REPORT_FILE, "w") as log:

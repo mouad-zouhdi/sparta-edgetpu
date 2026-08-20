@@ -140,7 +140,8 @@ def _load_googlenet(num_classes: int, pretrained: bool) -> nn.Module:
     """
     import torchvision.models as tvm
     if pretrained:
-        # Le checkpoint pretrained inclut les aux classifiers.
+        # The pretrained checkpoint contains the auxiliary classifier weights, so
+    # aux_logits must be True at construction; they are removed just after.
         m = tvm.googlenet(weights=tvm.GoogLeNet_Weights.IMAGENET1K_V1, aux_logits=True)
     else:
         # Random init, so the aux classifiers can be disabled straight away.

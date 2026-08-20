@@ -154,7 +154,7 @@ def resolve_paths(platform_dir, results_dir):
 
     models_root = platform_dir / "models"
     if not models_root.is_dir():
-        # Fallback layout legacy : les artefacts sont directement dans platform_dir
+        # Fallback: the artefacts sit directly inside platform_dir
         models_root = platform_dir
 
     TFLITE_DIR = models_root / "tflite_int8"
@@ -169,12 +169,12 @@ def resolve_paths(platform_dir, results_dir):
 
 
 def resolve_data_dir(data_dir_arg, platform_dir):
-    """Renvoie le dossier contenant cifar-100-python/.
+    """Locate the directory holding cifar-100-python/.
 
-    Si --data_dir n'est pas fourni, essaie dans cet ordre :
-        {platform_dir}/dataset/cifar100   (layout data_to_platform)
-        {platform_dir}/data               (layout dev legacy)
-        {platform_dir}                    (cifar-100-python direct dans platform_dir)
+    When --data_dir is not given, the usual layouts are tried in order:
+        {platform_dir}/dataset/cifar100   deployed layout
+        {platform_dir}/data               development layout
+        {platform_dir}                    cifar-100-python directly inside it
     """
     if data_dir_arg:
         return Path(data_dir_arg)
@@ -302,7 +302,7 @@ def _bootstrap_ci95(correct_flags, n_resamples=1000, seed=0):
 
 
 def _accuracy_with_ci(correct_top1, correct_top5):
-    """Renvoie un dict avec top1/top5 + bornes IC 95% bootstrap."""
+    """Return top-1 and top-5 accuracy with their bootstrap 95 % interval bounds."""
     n = len(correct_top1)
     if n == 0:
         return {"top1_pct": 0.0, "top5_pct": 0.0,
@@ -408,7 +408,7 @@ def measure_lat(interp, warmup, runs, seed=0):
 
 
 # ─────────────────────────────────────────────
-# Stats statiques sur le .tflite
+# Static statistics read from the .tflite itself
 # ─────────────────────────────────────────────
 
 def file_size_mib(p):
@@ -633,7 +633,7 @@ def measure_cpu(cfg, samples_for_acc, warmup, runs, fp32_acc=None):
 
     if cfg["f32_path"] and os.path.exists(cfg["f32_path"]):
         # FP32 CPU accuracy: when fp32_accuracy.json has an entry for this model,
-        # on l'importe ; sinon on lance la boucle locale (lente sur Pi).
+        # import it; otherwise run the evaluation locally, which is slow on a Pi.
         precomputed = (fp32_acc or {}).get(cfg["name"])
         if precomputed and "_error" not in precomputed:
             out["top1_cpu_f32_pct"] = precomputed["top1_pct"]
@@ -675,7 +675,7 @@ def measure_cpu(cfg, samples_for_acc, warmup, runs, fp32_acc=None):
         print(f"  [CPU FP32] {fl['mean']:.2f} ± {fl['std']:.2f} ms")
         del cf
     else:
-        print("  [CPU FP32] Pas de fichier float32, skip.")
+        print("  [CPU FP32] No float32 model, skipping.")
 
     return out
 
@@ -990,13 +990,13 @@ def main():
                              "compiler_metrics.json} et dataset/cifar100/cifar-100-python/. "
                              f"Default: {BASE_DIR}")
     parser.add_argument("--results_dir", type=str, default=str(BASE_DIR),
-                        help="Dossier de sortie pour benchmark_results.{json,csv}. "
+                        help="Output directory for benchmark_results.{json,csv}. "
                              f"Default: {BASE_DIR}")
     parser.add_argument("--data_dir", type=str, default=None,
-                        help="Dossier contenant cifar-100-python/. Si non fourni, "
+                        help="Directory containing cifar-100-python/. When omitted, it is "
                              "derived from --platform_dir when omitted.")
     parser.add_argument("--device", choices=["cpu", "tpu", "both"], default="both",
-                        help="Quel(s) device(s) mesurer ce run. Le JSON de sortie est cumulatif : "
+                        help="Which device(s) to measure in this run. The output JSON is cumulative: "
                              "running repeatedly with different --device values fills in the missing fields.")
     parser.add_argument("--warmup", type=int, required=True,
                         help="Discarded warmup inferences. 30 is usually enough, 50 for sub-millisecond models")
@@ -1038,9 +1038,10 @@ def main():
               f"will be imported from it rather than recomputed, which on a Pi is "
               f"about a thousand times faster and gives the same numbers.")
     else:
-        print(f"[INFO] fp32_accuracy.json absent dans {FP32_ACC_FILE.parent.name}/ — "
-              f"FP32 CPU accuracy will be measured locally, which is slow on a Pi. To skip it, "
-              f"lance d'abord compute_fp32_accuracy.py sur GPU cluster.")
+        print(f"[INFO] no fp32_accuracy.json in {FP32_ACC_FILE.parent.name}/; "
+              f"FP32 CPU accuracy will be measured locally, which is slow on a Pi. "
+              f"To skip it, produce that file first with aggregate_pruning_logs.py "
+              f"on the machine that ran the pruning.")
 
     discovered = discover_models(require_tpu_compiled=require_tpu)
     if args.models:
@@ -1048,7 +1049,7 @@ def main():
     if not discovered:
         print("No model found."); return
 
-    # Charge le JSON existant pour merge
+    # Load the existing JSON so this pass merges into it
     models_dict = load_existing()
     if models_dict:
         print(f"[INFO] {len(models_dict)} model(s) already in {RESULTS_JSON.name}; "

@@ -176,7 +176,7 @@ MODELS = {
         "loader": _load_bninception,
         "input_size": 224,
         # bninception : BGR, range [0,255], mean=[104,117,128], std=[1,1,1].
-        # Le wrapper preprocess() honore le flag `bgr` et applique les stats brutes.
+        # preprocess() honours the `bgr` flag and applies the raw statistics.
         "mean": (104.0, 117.0, 128.0),
         "std": (1.0, 1.0, 1.0),
         "bgr": True,
@@ -367,7 +367,7 @@ def convert_onnx_to_tflite(onnx_path: str, float_path: str, name: str):
     candidates = list(tmp_dir.glob("*.tflite"))
     if not candidates:
         shutil.rmtree(str(tmp_dir), ignore_errors=True)
-        raise FileNotFoundError(f"Aucun .tflite produit par onnx2tf pour {name}")
+        raise FileNotFoundError(f"onnx2tf produced no .tflite for {name}")
 
     src = None
     for c in candidates:
@@ -633,7 +633,7 @@ def main():
     print("multi_tpu/models — TEST DE CONVERSION TFLITE")
     print(f"  Models     : {names}")
     print(f"  Calib      : {args.num_calib} images CIFAR-100 train (bicubique → input size)")
-    print(f"  Sortie     : {BASE_DIR}")
+    print(f"  Output     : {BASE_DIR}")
     print("=" * 70)
 
     report = {"models": {}, "summary": {}}

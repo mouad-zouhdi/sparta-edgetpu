@@ -427,10 +427,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train the CIFAR-100 baselines (PruningBench recipe)")
     parser.add_argument("--output_dir", type=str, required=True,
-                        help="Dossier de sortie (ex: ../models)")
+                        help="Output directory (e.g. ../models)")
     parser.add_argument("--data_dir", type=str, required=True,
-                        help="Dossier contenant le sous-dossier `cifar-100-python/` "
-                             "(format pickle binaire d'origine de Krizhevsky). "
+                        help="Directory containing the `cifar-100-python/` subfolder "
+                             "(Krizhevsky's original binary pickle format). "
                              "Download it manually; see the README.")
     parser.add_argument("--models", nargs="+", default=None,
                         choices=ALL_MODEL_NAMES,
@@ -487,7 +487,7 @@ def main():
         status = f"{acc:.2f}%" if acc is not None else "FAILED"
         print(f"  {name:18s} {status}")
 
-    print(f"\nFichiers dans {output_dir}/ :")
+    print(f"\nFiles in {output_dir}/:")
     for f in sorted(output_dir.iterdir()):
         if f.suffix in (".pt", ".json"):
             print(f"  {f.name:30s} {f.stat().st_size/1024/1024:8.2f} MB")

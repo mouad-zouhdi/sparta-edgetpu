@@ -125,7 +125,7 @@ def main():
 
     models = discover(a.model_dir, a.tags_file)
     if not models:
-        print(f"aucun modele dans {a.model_dir}", file=sys.stderr)
+        print(f"no model found in {a.model_dir}", file=sys.stderr)
         return 1
     random.Random(42 + a.pass_idx).shuffle(models)
     if a.limit:

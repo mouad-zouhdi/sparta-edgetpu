@@ -51,7 +51,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-# Imports pour torch.load(weights_only=False) sur les baselines custom
+# Required so torch.load(weights_only=False) can resolve the baseline classes
 sys.path.insert(0, str(Path(__file__).parent))
 import cifar_resnet  # noqa: F401
 import cifar_vgg     # noqa: F401
@@ -114,7 +114,7 @@ def load_baseline_structure(models_dir):
 
 
 def baseline_lookup(layers, layer_name):
-    """Cherche le nb d'out_channels d'une couche dans une liste de couches."""
+    """Find a layer's baseline output width by name within a structure list."""
     for entry in layers:
         if entry["layer"] == layer_name:
             return entry["out_channels"]
@@ -147,9 +147,9 @@ def main():
                         help="Directory of baseline .pt files (default ./models). Opened only to "
                              "record their reference layer structure.")
     parser.add_argument("--fp32_output", default="./fp32_accuracy.json",
-                        help="Chemin du JSON fp32_accuracy de sortie")
+                        help="Path of the fp32_accuracy JSON to write")
     parser.add_argument("--layer_output", default="./layer_sparsity.json",
-                        help="Chemin du JSON layer_sparsity de sortie")
+                        help="Path of the layer_sparsity JSON to write")
     parser.add_argument("--merge", action="store_true",
                         help="Keep the entries of any existing output JSON and add to them, "
                              "rather than rewriting. Use this when adding a new batch of "
@@ -195,7 +195,7 @@ def main():
             except Exception as e:
                 print(f"  [merge] could not read layer_sparsity.json: {e}", flush=True)
 
-    # ── 2. Structure des baselines (chargement des .pt) ───────────────────
+    # -- 2. Baseline structures, which means opening the .pt files ---------
     print(f"\n[1/3] Extraction structure baselines depuis {models_dir}...")
     fresh_baselines = load_baseline_structure(models_dir)
     # Prefer the freshly read structure; fall back to the stored one when the
@@ -204,7 +204,7 @@ def main():
     baselines_struct.update(fresh_baselines)
 
     # ── 3. Per-run logs ───────────────────────────────────────────────────
-    print(f"\n[2/3] Lecture des per-run logs dans {logs_dir}...")
+    print(f"\n[2/3] Reading per-run logs from {logs_dir}...")
     fp32_models = dict(existing_fp32)
     pruned_layers = dict(existing_pruned_layers)
     n_added, n_skipped_old, n_failed = 0, 0, 0

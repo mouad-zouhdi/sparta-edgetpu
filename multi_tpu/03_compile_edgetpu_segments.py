@@ -74,7 +74,7 @@ from pathlib import Path
 
 
 # ─────────────────────────────────────────────
-# Parsing du stdout du compiler
+# Parsing the compiler's stdout
 # ─────────────────────────────────────────────
 _UNIT_TO_MB = {"B": 1 / (1024 * 1024), "KiB": 1 / 1024, "MiB": 1.0, "GiB": 1024.0}
 
@@ -178,7 +178,7 @@ def parse_compile_stdout(stdout: str, num_segments_requested: int) -> dict:
 def main():
     """Compile one INT8 model into N segments and write the structured JSON report."""
     p = argparse.ArgumentParser(
-        description="Wrapper edgetpu_compiler --num_segments N + parse rapport.")
+        description="Compile an INT8 model into N Edge TPU segments and report the result.")
     p.add_argument("--input", required=True,
                    help="The INT8 .tflite to compile")
     p.add_argument("--num_segments", type=int, required=True,

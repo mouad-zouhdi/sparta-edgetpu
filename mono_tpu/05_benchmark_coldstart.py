@@ -331,7 +331,7 @@ def save_results(models_dict, devices_in_run, args, passes_done_this_run):
 
 
 # CSV: one scalar summary row per (model, mode), holding cold and steady.
-# La matrice K × N et per_position restent dans le JSON pour analyse fine.
+# The full K x N matrix and per_position stay in the JSON for finer analysis.
 SUMMARY_KEYS = ["mean", "std", "median", "p95", "p99", "min", "max", "cv", "n"]
 MODES = ["cpu_int8", "cpu_f32", "tpu_int8"]
 SECTIONS = ["cold", "steady"]
@@ -408,10 +408,10 @@ def main():
                         help="Input root. "
                              f"Default: {BASE_DIR}")
     parser.add_argument("--results_dir", type=str, default=str(BASE_DIR),
-                        help="Dossier de sortie pour cold_start_results.{json,csv}. "
+                        help="Output directory for cold_start_results.{json,csv}. "
                              f"Default: {BASE_DIR}")
     parser.add_argument("--device", choices=["cpu", "tpu", "both"], default="both",
-                        help="Quel(s) device(s) mesurer ce run. Cumulatif via le JSON.")
+                        help="Which device(s) to measure. Results accumulate in the JSON across runs.")
     parser.add_argument("--passes", type=int, default=DEFAULT_PASSES,
                         help=f"Full passes over the model list (default {DEFAULT_PASSES}). The JSON is "
                              f"cumulative: re-running appends passes to the existing models.")
@@ -424,8 +424,8 @@ def main():
                         help="Keep a deterministic order; useful for debugging, biased for measurement.")
     parser.add_argument("--print_curve", action="store_true", default=False,
                         help="Print all N timings for each (model, mode, pass) "
-                             "au lieu du seul (cold, last). Utile pour comparer visuellement "
-                             "les courbes de chauffe entre passes (smoke test).")
+                             "instead of only the cold and last ones, which makes the warm-up "
+                             "curves comparable between passes.")
     parser.add_argument("--models", nargs="+", default=None,
                         help="Substring filter on the model name (default: all).")
     args = parser.parse_args()
@@ -512,7 +512,7 @@ def main():
 
     print("\n" + "=" * 72)
     print(f"[OK] {args.passes} passes completed over {len(discovered)} models.")
-    print(f"     JSON + CSV dans {RESULTS_JSON.parent}")
+    print(f"     JSON + CSV in {RESULTS_JSON.parent}")
     print("=" * 72)
 
 

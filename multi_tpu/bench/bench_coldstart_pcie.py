@@ -110,12 +110,12 @@ def main():
     ap.add_argument("--positions", type=int, default=10)
     ap.add_argument("--tpu", type=int, default=0)
     ap.add_argument("--limit", type=int, default=0,
-                    help="ne mesurer que les N premiers modeles (smoke test)")
+                    help="measure only the first N models (smoke test)")
     a = ap.parse_args()
 
     models = discover()
     if not models:
-        print(f"aucun modele dans {MODEL_DIR}", file=sys.stderr)
+        print(f"no model found in {MODEL_DIR}", file=sys.stderr)
         return 1
     random.Random(42 + a.pass_idx).shuffle(models)   # ordre propre a la passe
     if a.limit:

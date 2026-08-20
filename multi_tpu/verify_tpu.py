@@ -51,7 +51,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-# ai_edge_litert (LiteRT moderne) — supporte les ops produites par ai-edge-quantizer.
+# ai_edge_litert reads the operators ai-edge-quantizer produces correctly.
 # The tflite_runtime 2.5 shipped with pycoral is too old for models produced by
 # ai-edge-quantizer: it saturates their output at the zero point silently, giving
 # a constant prediction rather than an error. ai_edge_litert reads them correctly

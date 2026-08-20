@@ -267,7 +267,7 @@ def get_dataloaders(data_dir, batch_size, seed, model_name):
 
 
 # ─────────────────────────────────────────────
-# Eval (avec aux logits gestion via tuple)
+# Evaluate. Some architectures return a tuple when aux logits are present.
 # ─────────────────────────────────────────────
 @torch.no_grad()
 def evaluate_topk(model, val_loader, device):
@@ -900,7 +900,7 @@ def main():
     parser.add_argument("--resume_from", default=None,
                         help="Path of the PREFT checkpoint to load for --ft_only.")
     parser.add_argument("--preft_output", default=None,
-                        help="Chemin explicite pour sauvegarder le PREFT.pt "
+                        help="Explicit path for the PREFT checkpoint "
                              "in --prune_only mode (default: derived automatically).")
     parser.add_argument("--run_tag", default=None,
                         help="Run identifier substituted for 'target<X>mb' in the log filename "
