@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# coral-env — Edge TPU inference and benchmarking.
+#
+# Requires Python 3.9: pycoral 2.0.0 ships wheels for 3.6-3.9 only. This env
+# deliberately has NO torch and NO tensorflow — it runs on the Raspberry Pi and
+# on the 8x Edge TPU host, where neither is available nor wanted.
+#
+# IMPORTANT: tflite_runtime is installed because pycoral imports it, but do not
+# use it to run models produced by ai-edge-quantizer: version 2.5 saturates
+# their output at the zero point silently (all logits equal, top-1 always the
+# same class). Use ai_edge_litert.interpreter.Interpreter instead; it also
+# accepts load_delegate("libedgetpu.so.1"). See docs/PITFALLS.md.
+# ---------------------------------------------------------------------------
+
+pycoral==2.0.0              # Edge TPU delegate, PipelinedModelRunner
+tflite-runtime==2.5.0.post1 # pulled in by pycoral; see warning above
+ai-edge-litert==2.1.0       # the interpreter actually used for inference
+tflite==2.10.0              # flatbuffer schema, used to parse model metadata
+numpy==1.26.4               # pinned <2: pycoral 2.0.0 is not numpy-2 compatible
+pillow==11.3.0
+tqdm==4.68.2
+
+# --- Analysis-side dependencies -------------------------------------------
+# bench_parallel.py joins its measurements against the model metadata with
+# pandas. These are NOT needed to run inference, only to run that benchmark and
+# to plot results, so on a minimal Raspberry Pi deployment they can be omitted.
+pandas
+matplotlib

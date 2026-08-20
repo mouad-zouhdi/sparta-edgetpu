@@ -1,0 +1,185 @@
+{
+  "_comment": [
+    "Source paths for setup/stage_models.py, as used on the machine where this",
+    "research ran. Paths are absolute because the artefacts were produced over",
+    "several months across directories outside the repository. Anyone",
+    "reproducing this work should edit this file, not the script.",
+    "",
+    "'dest' is the path inside the Hugging Face repository.",
+    "'keep_parent' preserves one directory level, which matters for the",
+    "segmented Edge TPU models: each model's segments live in their own",
+    "directory and would otherwise collide by filename."
+  ],
+  "groups": {
+    "axis1 baselines (pytorch)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/models/*.pt"
+      ],
+      "dest": "axis1_cifar100/baselines"
+    },
+    "axis1 pruned (pytorch)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/pytorch_pruned/*.pt",
+        "/home/a131/Desktop/second/pytorch_pruned/*.pt"
+      ],
+      "dest": "axis1_cifar100/pruned_pytorch"
+    },
+    "axis1 tflite int8": {
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/tflite_int8/*.tflite",
+        "/home/a131/Desktop/second/tflite_int8/*.tflite"
+      ],
+      "dest": "axis1_cifar100/tflite_int8"
+    },
+    "axis1 edgetpu (measured)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/edgetpu_compiled/*_edgetpu.tflite"
+      ],
+      "dest": "axis1_cifar100/edgetpu"
+    },
+    "axis1 logs": {
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/pruning_logs/*.json",
+        "/home/a131/Desktop/second/pruning_logs/*.json",
+        "/home/a131/Desktop/Project/data/models/fp32_accuracy.json",
+        "/home/a131/Desktop/Project/data/models/layer_sparsity.json",
+        "/home/a131/Desktop/Project/data/models/compiler_metrics.json"
+      ],
+      "dest": "axis1_cifar100/logs"
+    },
+    "axis2 pruned (pytorch)": {
+      "_comment": "Post-fine-tuning models, plus the PREFT checkpoints that WON their guided loop and were the direct input to that fine-tuning. The 32 PREFT files from REJECTED loop iterations are excluded: they were internal probes of the loop, never benchmarked. The numbers from every iteration, winners and losers alike, are preserved in the pipeline_summary.json files, so the fixed-overhead regression remains reproducible without the binaries.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/*_taylor.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/*_magnitude_l2.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N1_2.81mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N2_7.50mb_iter4_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N3_12.07mb_iter7_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N4_16.78mb_iter8_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N5_22.21mb_iter9_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_target17.90mb_iter6_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_target7.71mb_iter4_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v2_bninception_taylor_target5.46mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v3_taylor_target3.96mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v3_taylor_target8.38mb_iter5_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N1_4.47mb_iter1_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N2_8.68mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N3_12.69mb_iter6_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N4_17.72mb_iter6_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N5_22.22mb_iter8_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N6_26.46mb_iter10_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N8_38.52mb_iter5_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_target17.26mb_iter8_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_target4.06mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N1_5.41mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N2_12.07mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N3_18.96mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N4_25.51mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N5_31.92mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N6_41.25mb_iter1_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N7_36.22mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_target24.43mb_iter4_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_target5.46mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet152_taylor_target11.44mb_iter3_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet152_taylor_target25.05mb_iter4_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet50_taylor_target13.59mb_iter2_PREFT.pt",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N1_2.81mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N2_7.50mb_iter4_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N3_12.07mb_iter7_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N4_16.78mb_iter8_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_N5_22.21mb_iter9_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_target17.90mb_iter6_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_resnet_v2_taylor_target7.71mb_iter4_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v2_bninception_taylor_target5.46mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v3_taylor_target3.96mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v3_taylor_target8.38mb_iter5_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N1_4.47mb_iter1_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N2_8.68mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N3_12.69mb_iter6_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N4_17.72mb_iter6_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N5_22.22mb_iter8_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N6_26.46mb_iter10_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_N8_38.52mb_iter5_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_target17.26mb_iter8_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/inception_v4_taylor_target4.06mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N1_5.41mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N2_12.07mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N3_18.96mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N4_25.51mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N5_31.92mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N6_41.25mb_iter1_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_N7_36.22mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_target24.43mb_iter4_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet101_taylor_target5.46mb_iter2_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet152_taylor_target11.44mb_iter3_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet152_taylor_target25.05mb_iter4_PREFT.meta.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/resnet50_taylor_target13.59mb_iter2_PREFT.meta.json"
+      ],
+      "dest": "axis2_imagenet/pruned_pytorch"
+    },
+    "axis2 edgetpu sweepN (measured)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_compiled_sweepN/*/*_edgetpu.tflite"
+      ],
+      "dest": "axis2_imagenet/edgetpu/sweep_n1_to_n8",
+      "keep_parent": true
+    },
+    "axis2 edgetpu baselines (measured)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_baseline_v2/*/*_edgetpu.tflite"
+      ],
+      "dest": "axis2_imagenet/edgetpu/baselines",
+      "keep_parent": true
+    },
+    "axis2 edgetpu wave (measured)": {
+      "_comment": "Final post-fine-tuning models of the July wave, compiled at several segment counts. The sibling directory of PREFT-derived compiles is deliberately absent: those were the guided loop's own probes.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_compiled_pruned_v2/*/*_edgetpu.tflite"
+      ],
+      "dest": "axis2_imagenet/edgetpu/wave",
+      "keep_parent": true
+    },
+    "axis2 logs and compile reports": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/pruning_logs_imagenet/*.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_compiled_sweepN/*compile_report.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_baseline_v2/*compile_report.json",
+        "/home/a131/Desktop/Project/multi_tpu/models/edgetpu_compiled_pruned_v2/*compile_report.json"
+      ],
+      "dest": "axis2_imagenet/logs"
+    },
+    "synthetic tflite int8": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/synthetic_models/regen_a131/outputs/tflite/*.tflite"
+      ],
+      "dest": "synthetic/tflite_int8"
+    },
+    "synthetic edgetpu N1..N8 (measured)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/synthetic_models/outputs_pipeline/N*/*_edgetpu.tflite"
+      ],
+      "dest": "synthetic/edgetpu",
+      "keep_parent": true
+    },
+    "synthetic metadata": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/synthetic_models/regen_a131/outputs/metadata/*.json"
+      ],
+      "dest": "synthetic/metadata"
+    },
+    "synthetic compile reports": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/synthetic_models/outputs_pipeline/reports/*.json"
+      ],
+      "dest": "synthetic/compile_reports"
+    },
+    "measurements (csv)": {
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/synthetic_models/outputs/bench_full/*.csv",
+        "/home/a131/Desktop/mesures_brut/benchmark_results.csv",
+        "/home/a131/Desktop/mesures_brut/benchmark_results.json"
+      ],
+      "dest": "measurements"
+    }
+  }
+}

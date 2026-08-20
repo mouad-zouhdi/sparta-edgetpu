@@ -1,0 +1,31 @@
+# Environments created by setup/setup_envs.sh
+envs/
+*.egg-info/
+__pycache__/
+*.py[cod]
+
+# Model artefacts: published on the Hugging Face Hub, never committed here.
+# See docs/MODELS.md.
+*.pt
+*.pth
+*.onnx
+*.tflite
+models/
+outputs/
+outputs_pipeline/
+
+# Datasets
+data/
+calib_data/
+cifar-100-python/
+*.npy
+
+# Results, which belong with the models rather than with the code
+*.csv
+benchmark_results.json
+cold_start_results.json
+
+# Local scratch
+.cache/
+*.log
+tmp/

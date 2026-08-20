@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# pytorch-env — training, structured pruning and PyTorch -> TFLite conversion.
+#
+# Requires Python 3.12. The 1.x line of onnx2tf routes conversion through the
+# MLIR backend, which produces flatbuffers that make edgetpu_compiler segfault
+# under --num_segments >= 2; the 2.x line uses flatbuffer_direct and does not.
+# See synthetic/build_one.py for the full account.
+#
+# CUDA build: torch is pinned to the cu128 wheel because the cluster hosts
+# Blackwell GPUs (sm_120), which earlier CUDA builds do not support.
+# ---------------------------------------------------------------------------
+
+# --- Training / pruning ----------------------------------------------------
+torch==2.9.1
+torchvision==0.24.1
+torch-pruning==1.6.1        # structured pruning; the pruner API changed in 1.6
+timm==1.0.26                # inception_v3/v4, inception_resnet_v2 weights
+pretrainedmodels==0.7.4     # BN-Inception (Inception V2) only
+
+# --- PyTorch -> ONNX -> TFLite float32 ------------------------------------
+onnx==1.21.0
+onnxsim==0.6.2
+onnx-graphsurgeon
+sng4onnx==2.0.1
+onnx2tf==2.4.0              # NCHW -> NHWC; needs setup/apply_patches.py
+tf2onnx==1.17.0             # Keras -> ONNX, synthetic generator only
+tf_keras==2.21.0
+ai_edge_tensorflow==2.21.0.dev20251110
+
+# --- TFLite float32 -> int8 (post-training quantization) ------------------
+ai-edge-quantizer==0.4.2    # needs setup/apply_patches.py
+ai-edge-litert==2.1.2       # inference runtime; do NOT use tflite_runtime here
+flatbuffers==25.12.19       # SignatureDef injection into onnx2tf output
+
+# --- Utilities -------------------------------------------------------------
+numpy==2.4.3
+pillow==12.1.1
+psutil==7.2.2

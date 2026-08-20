@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# synth-env — synthetic CNN generator (Keras graph build + INT8 quantization).
+#
+# Kept separate from pytorch-env on purpose: installing a full TensorFlow next
+# to onnx2tf breaks the numpy/protobuf pins that the PyTorch->TFLite path
+# depends on. tensorflow-cpu is enough here, the workload is a graph build plus
+# 100 calibration forward passes, never a training loop.
+#
+# Requires Python 3.12. The point of this env is onnx2tf's flatbuffer_direct
+# backend: it is the only conversion path whose output edgetpu_compiler can
+# segment without segfaulting. Verified working with 2.4.0 and 2.5.0; the 1.x
+# line routes through MLIR and does not work. build_one.py asserts on the
+# tflite's description field rather than on the version number, so an accidental
+# downgrade fails immediately instead of hours later at compile time.
+# ---------------------------------------------------------------------------
+
+tensorflow-cpu>=2.18
+tf-keras
+tf2onnx
+onnx
+onnxsim
+onnx-graphsurgeon
+sng4onnx
+onnx2tf>=2.4                # flatbuffer_direct backend; 1.x will NOT work
+ai_edge_quantizer
+ai_edge_litert
+psutil
+requests
+numpy>=2
