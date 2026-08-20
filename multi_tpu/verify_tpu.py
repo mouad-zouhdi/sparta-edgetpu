@@ -351,7 +351,7 @@ def main():
         report["models"][name] = r
         if r["status"] == "ok":
             print(f"  top1 match  : {r['top1_match_rate']*100:5.1f}% ({int(r['top1_match_rate']*args.n_inputs)}/{args.n_inputs})")
-            print(f"  top5 overlap: {r['top5_overlap_mean']:.2f}/5 (moyenne sur {args.n_inputs} inputs)")
+            print(f"  top5 overlap: {r['top5_overlap_mean']:.2f}/5 (mean over {args.n_inputs} inputs)")
             print(f"  cos(CPU,TPU): mean={r['cos_cpu_tpu_mean']:.6f}  min={r['cos_cpu_tpu_min']:.6f}")
             print(f"  max |Δ int8|: overall={r['max_abs_diff_int8_overall']}  mean={r['max_abs_diff_int8_mean']:.2f}")
             print(f"  latence CPU : {r['latency_cpu_int8']['mean_ms']:7.2f} ms  "
@@ -377,7 +377,7 @@ def main():
     }
     with open(REPORT_PATH, "w") as f:
         json.dump(report, f, indent=2, default=str)
-    print(f"Rapport JSON : {REPORT_PATH}")
+    print(f"JSON report: {REPORT_PATH}")
 
 
 if __name__ == "__main__":

@@ -251,7 +251,7 @@ def get_dataloaders(data_dir, batch_size, seed, model_name):
     val_root = Path(data_dir) / "val"
     if not train_root.exists() or not val_root.exists():
         raise FileNotFoundError(
-            f"ImageNet attendu en {data_dir}/{{train,val}}/ (layout ImageFolder).")
+            f"Expected ImageNet at {data_dir}/{{train,val}}/ (ImageFolder layout).")
     train_ds = datasets.ImageFolder(str(train_root), transform=train_tf)
     val_ds = datasets.ImageFolder(str(val_root), transform=val_tf)
 
@@ -681,7 +681,7 @@ def run_one(args, device, pruned_dir, log_dir):
     log_path = log_dir / f"{name}_{imp_tag}_{run_id}{seed_suffix}.json"
 
     print(f"\n{'━' * 72}")
-    print(f"  {name.upper()}  —  {imp_tag}  —  cible {args.target_mb} MB  "
+    print(f"  {name.upper()}  |  {imp_tag}  |  target {args.target_mb} MB  "
           f"(seed={args.seed})")
     print(f"{'━' * 72}", flush=True)
 
@@ -707,7 +707,7 @@ def run_one(args, device, pruned_dir, log_dir):
               f"({pre_params/1e6:.1f}M ≈ {pre_size_mb_est:.1f} MB int8), "
               f"MACs={pre_macs:,.0f}", flush=True)
 
-        # ── 2. Calculer le palier cible ──────────────────────────────
+        # -- 2. Work out the pruning rate the size target implies -----
         target_params = args.target_mb * 1_000_000
         if pre_params <= target_params:
             target_pct = 0.0
@@ -716,8 +716,8 @@ def run_one(args, device, pruned_dir, log_dir):
                   flush=True)
         else:
             target_pct = 100 * (1 - target_params / pre_params)
-            print(f"  → Palier cible : {target_pct:.1f}%  "
-                  f"({pre_params:,} → {int(target_params):,} params)",
+            print(f"  -> Target rate : {target_pct:.1f}%  "
+                  f"({pre_params:,} -> {int(target_params):,} params)",
                   flush=True)
 
         # ── 3. Dataloaders ImageNet ──────────────────────────────────
@@ -910,7 +910,7 @@ def main():
     args = parser.parse_args()
 
     if args.prune_only and args.ft_only:
-        parser.error("--prune_only et --ft_only sont exclusifs")
+        parser.error("--prune_only and --ft_only are mutually exclusive")
     if args.ft_only and not args.resume_from:
         parser.error("--ft_only requires --resume_from PATH")
 
@@ -931,8 +931,8 @@ def main():
         print(f"  GPU        : {torch.cuda.get_device_name(0)}")
     print(f"  Data dir   : {args.data_dir}")
     print(f"  Model      : {args.model}")
-    print(f"  Target     : {args.target_mb} MB (≈ {args.target_mb}M params en int8)")
-    print(f"  FT epochs  : {args.ft_epochs} (SGD lr={RECIPE_FT['lr']} cosine→0)")
+    print(f"  Target     : {args.target_mb} MB (about {args.target_mb}M params at 1 byte each)")
+    print(f"  FT epochs  : {args.ft_epochs} (SGD lr={RECIPE_FT['lr']}, cosine to 0)")
     print(f"  Batch size : {args.batch_size}")
     print(f"  Seed       : {args.seed}")
     print(f"  Out pruned : {pruned_dir}")

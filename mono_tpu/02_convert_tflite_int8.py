@@ -62,6 +62,7 @@ USAGE (pytorch-env, after setup/apply_patches.py has been run)
 """
 
 import argparse
+import sys
 import os
 import shutil
 from pathlib import Path
@@ -102,9 +103,22 @@ def _set_work_dir(root: Path) -> None:
     ONNX_DIR = root / "onnx_models"
     FLOAT_DIR = root / "tflite_float32"
     INT8_DIR = root / "tflite_int8"
+    _make_output_dirs()
 
-for d in [ONNX_DIR, FLOAT_DIR, INT8_DIR]:
-    d.mkdir(parents=True, exist_ok=True)
+
+def _make_output_dirs() -> None:
+    """Create the three output directories, which the conversion writes into.
+
+    Called at import for the default layout and again from _set_work_dir(), since
+    rebinding the paths does not create the directories they now point at. That
+    omission is not loud: the ONNX export fails per model with a missing-file
+    error rather than a missing-directory one, and the script still exits 0.
+    """
+    for d in (ONNX_DIR, FLOAT_DIR, INT8_DIR):
+        d.mkdir(parents=True, exist_ok=True)
+
+
+_make_output_dirs()
 
 MODEL_SIZES = {
     "resnet18":      32,
@@ -125,7 +139,7 @@ CIFAR_STD = np.array([0.2675, 0.2565, 0.2761], dtype=np.float32)
 # Dataset de calibration CIFAR-100 (NHWC, float32)
 # ─────────────────────────────────────────────
 def _cifar_train_arrays(data_dir):
-    """Charge CIFAR-100 train et retourne (N, 32, 32, 3) uint8."""
+    """Load the CIFAR-100 training images as a (N, 32, 32, 3) uint8 array."""
     ds = datasets.CIFAR100(root=str(data_dir), train=True, download=True, transform=None)
     return ds.data  # numpy uint8 (50000, 32, 32, 3)
 
@@ -573,6 +587,12 @@ def main():
             if f.suffix == ".tflite":
                 print(f"  {f.name:55s} {f.stat().st_size/1024/1024:8.1f} MiB")
 
+    # Exit non-zero when nothing converted. Individual failures are expected and
+    # must not abort the batch, but a run where EVERY model failed is a setup
+    # problem (a missing directory, a broken environment), and returning 0 makes
+    # a scripted pipeline carry on as if it had produced models.
+    return 1 if (failed and not success) else 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

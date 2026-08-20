@@ -770,7 +770,7 @@ def get_importance(name, num_classes):
         # HRank (Lin et al. 2020), data-driven activation-based.
         HRankImportance = _build_hrank_importance_class()
         return HRankImportance()
-    raise ValueError(f"Importance inconnue : {name}. Disponibles : {ALL_IMPORTANCES}")
+    raise ValueError(f"Unknown importance criterion: {name}. Available: {ALL_IMPORTANCES}")
 
 
 def get_ignored_layers(model, name):
@@ -848,7 +848,7 @@ def sparsity_learning_phase(name, sparsity_method, args, device, models_dir):
     model = torch.load(str(models_dir / f"{name}.pt"),
                        map_location="cpu", weights_only=False)
     if sparsity_method == "bn_scale" and not has_batchnorm(model):
-        print(f"  [sparsity] {name} n'a pas de BatchNorm → bn_scale incompatible, skip.")
+        print(f"  [sparsity] {name} has no BatchNorm, so bn_scale does not apply; skipping.")
         return None
     model = model.to(device)
 
@@ -879,7 +879,7 @@ def sparsity_learning_phase(name, sparsity_method, args, device, models_dir):
             ignored_layers=ignored_layers,
         )
     else:
-        raise ValueError(f"sparsity_method inconnu : {sparsity_method}")
+        raise ValueError(f"unknown sparsity_method: {sparsity_method}")
 
     # Boucle de sparsity learning
     train_loader, val_loader = get_dataloaders(args.data_dir, args.batch_size, args.seed)

@@ -132,7 +132,7 @@ def main():
             try:
                 lat = one_model(path, a.tpu, a.positions)
             except Exception as e:
-                print(f"  [ECHEC] {tag}: {type(e).__name__}: {e}", flush=True)
+                print(f"  [FAILED] {tag}: {type(e).__name__}: {e}", flush=True)
                 fail += 1
                 continue
             ts = time.time()

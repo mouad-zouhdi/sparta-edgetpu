@@ -269,7 +269,7 @@ def main():
     p.add_argument("--model", required=True, choices=ALL_MODEL_NAMES,
                    help="Model name, used to look up its preprocessing convention")
     p.add_argument("--data_dir", required=True,
-                   help="Root ImageNet (contient train/) pour calibration")
+                   help="ImageNet root (must contain train/), used for calibration")
     p.add_argument("--output_dir", required=True,
                    help="Output directory for the INT8 .tflite")
     p.add_argument("--num_calib", type=int, default=100)

@@ -626,7 +626,7 @@ def main():
     unknown = [n for n in names if n not in MODELS]
     if unknown:
         print(f"ERROR: unknown models: {unknown}")
-        print(f"  Disponibles : {list(MODELS.keys())}")
+        print(f"  Available: {list(MODELS.keys())}")
         return
 
     print("=" * 70)
@@ -664,7 +664,7 @@ def main():
 
     with open(REPORT_PATH, "w") as f:
         json.dump(report, f, indent=2, default=str)
-    print(f"\nRapport JSON : {REPORT_PATH}")
+    print(f"\nJSON report: {REPORT_PATH}")
 
 
 if __name__ == "__main__":

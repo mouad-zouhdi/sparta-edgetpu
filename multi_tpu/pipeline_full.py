@@ -169,7 +169,12 @@ def infer_num_segments(target_mb: float) -> int:
 
 
 def run_step(cmd, label):
-    """Lance un subprocess Python et return (exit_code, duration_s)."""
+    """Run one pipeline stage as a subprocess; return (exit_code, duration_s).
+
+    Stages run as separate processes because they need different things: pruning
+    wants a GPU and torch, compiling wants the Edge TPU binary, and a crash in
+    one must not take the orchestrator with it.
+    """
     print(f"\n{'━' * 72}")
     print(f"  [{label}] {' '.join(str(c) for c in cmd)}")
     print(f"{'━' * 72}", flush=True)
@@ -210,7 +215,7 @@ def main():
                    help="Edge TPU segment count (default derived from the target: 8->1, 16->2, 32->4, 64->8)")
     p.add_argument("--target_start_offset", type=float, default=0.1,
                    help="Initial margin below target_mb (default 0.1 MB) "
-                        "pour marger l'overhead compile")
+                        "against the compiler overhead")
     p.add_argument("--refine_margin_mb", type=float, default=0.5,
                    help="Extra MB subtracted alongside off_chip when tightening the target "
                         "at each iteration (default 0.5)")
@@ -288,7 +293,7 @@ def main():
     print(f"\n{'═' * 72}")
     print(f"  pipeline_full — {args.model.upper()}")
     print(f"  target_mb_max = {args.target_mb} MB  →  {num_segments} segment(s)")
-    budget_mode = ("depuis actual_pct (grille)" if args.epochs_from_actual
+    budget_mode = ("derived from the achieved rate via FT_BUDGET_BANDS" if args.epochs_from_actual
                    else f"fixe {args.ft_epochs} ep / warmup {args.warmup_epochs}")
     print(f"  importance = {args.importance}, budget FT = {budget_mode}")
     print(f"  data_dir = {args.data_dir}")
@@ -431,7 +436,7 @@ def main():
     else:
         # Iteration budget exhausted without a fit
         session_summary["reason"] = (
-            f"max_iters {args.max_iters} atteint sans FIT")
+            f"max_iters {args.max_iters} reached without a fit")
 
     save_session()
 
@@ -454,7 +459,7 @@ def main():
                 actual_pct = float(json.load(f)["actual_pct"])
         except Exception as exc:
             print(f"\n[pipeline_full] NOGO — sidecar illisible ({meta_path}) : "
-                  f"{exc}. Impossible de calculer le budget FT.", flush=True)
+                  f"{exc}. Cannot derive the fine-tuning budget.", flush=True)
             session_summary["reason"] = f"meta sidecar unreadable: {exc}"
             save_session()
             sys.exit(3)
@@ -468,7 +473,7 @@ def main():
 
     # --- [4] Recovery fine-tuning, from the PREFT that won the loop ------
     print(f"\n{'═' * 72}")
-    print(f"  RECOVERY FT — depuis {winning_preft.name}")
+    print(f"  RECOVERY FINE-TUNING from {winning_preft.name}")
     print(f"{'═' * 72}", flush=True)
 
     cmd4 = [

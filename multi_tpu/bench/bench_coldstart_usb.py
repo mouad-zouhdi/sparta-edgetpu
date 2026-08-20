@@ -89,11 +89,11 @@ def make_interpreter(path: Path, retries: int = 8):
         except Exception as e:                       # noqa: BLE001
             last = e
             time.sleep(0.05 * (attempt + 1))
-    raise RuntimeError(f"delegate indisponible apres {retries} tentatives : {last}")
+    raise RuntimeError(f"delegate unavailable after {retries} tentatives : {last}")
 
 
 def one_model(path: Path, positions: int, seed: int = 123):
-    """Interpreteur neuf, puis `positions` inferences chronometrees."""
+    """Measure one model: a fresh interpreter, then `positions` timed inferences."""
     interp = make_interpreter(path)
     inp = interp.get_input_details()[0]
     rng = np.random.default_rng(seed)
@@ -142,7 +142,7 @@ def main():
             try:
                 lat = one_model(path, a.positions)
             except Exception as e:
-                print(f"  [ECHEC] {tag}: {type(e).__name__}: {e}", flush=True)
+                print(f"  [FAILED] {tag}: {type(e).__name__}: {e}", flush=True)
                 fail += 1
                 continue
             ts = time.time()

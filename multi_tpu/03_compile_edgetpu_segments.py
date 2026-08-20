@@ -182,7 +182,7 @@ def main():
     p.add_argument("--input", required=True,
                    help="The INT8 .tflite to compile")
     p.add_argument("--num_segments", type=int, required=True,
-                   help="Nombre de segments Edge TPU (1, 2, 4, 8...)")
+                   help="Number of Edge TPU segments (1, 2, 4, 8, ...)")
     p.add_argument("--output_dir", required=True,
                    help="Directory where edgetpu_compiler writes the *_edgetpu.tflite segments")
     p.add_argument("--report_out", required=True,

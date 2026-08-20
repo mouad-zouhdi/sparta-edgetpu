@@ -187,7 +187,7 @@ def main():
     """Discover the INT8 models, compile each, and write the metrics and report."""
     parser = argparse.ArgumentParser(description="SPARTA — Compilation Edge TPU")
     parser.add_argument("--models", nargs="+", default=None,
-                        help="Filtre par nom de base (correspondance partielle)")
+                        help="Substring filter on the model name")
     parser.add_argument("--tflite-dir", type=Path, default=DEFAULT_TFLITE_DIR,
                         help=f"Source directory of INT8 .tflite files (default: {DEFAULT_TFLITE_DIR})")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,

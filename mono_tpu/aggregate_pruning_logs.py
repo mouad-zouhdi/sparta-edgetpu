@@ -196,7 +196,7 @@ def main():
                 print(f"  [merge] could not read layer_sparsity.json: {e}", flush=True)
 
     # -- 2. Baseline structures, which means opening the .pt files ---------
-    print(f"\n[1/3] Extraction structure baselines depuis {models_dir}...")
+    print(f"\n[1/3] Reading baseline structures from {models_dir}...")
     fresh_baselines = load_baseline_structure(models_dir)
     # Prefer the freshly read structure; fall back to the stored one when the
     # baseline .pt is no longer where it was.

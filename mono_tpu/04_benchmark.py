@@ -573,7 +573,11 @@ def discover_models(require_tpu_compiled):
 # ─────────────────────────────────────────────
 
 def measure_static(cfg, compiler_metrics):
-    """Stats statiques (lecture du .tflite + compiler_metrics.json)."""
+    """Collect the size, parameter, MAC and memory-regime figures for one model.
+
+    Read from the .tflite itself and from compiler_metrics.json, so no inference
+    is needed and these are gathered even when no accelerator is attached.
+    """
     cp = cfg["int8_path"]
     name = cfg["name"]
     out = {
