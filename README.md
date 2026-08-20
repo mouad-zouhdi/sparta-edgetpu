@@ -203,7 +203,7 @@ processes competing for the accelerators crash each other.
 ## Pretrained models and measured artefacts
 
 Every model measured here is published separately on the Hugging Face Hub,
-because the collection is about 21 GB and exceeds what a git repository should
+because the collection is about 37 GB and exceeds what a git repository should
 carry. See `docs/MODELS.md` for the layout and a download script.
 
 ---

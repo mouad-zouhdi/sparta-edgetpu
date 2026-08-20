@@ -4,7 +4,7 @@ fetch_models.py — download the measured artefacts from the Hugging Face Hub.
 
 WHAT THIS DOES
     Downloads all or part of huggingface.co/mouad-zouhdi/sparta-edgetpu-models
-    into a local directory. The full collection is 37.5 GiB across 7486 files, so
+    into a local directory. The full collection is 37.38 GiB across 7479 files, so
     downloading a subset is usually what you want; --list shows what is on offer
     and how big each part is.
 
@@ -45,17 +45,17 @@ SETS: dict[str, tuple[str, list[str]]] = {
         ["axis1_cifar100/edgetpu/*"],
     ),
     "axis1-tflite": (
-        "3.1 GiB, 418 files. The same models quantized but not yet compiled, "
+        "2.97 GiB, 411 files. The same models quantized but not yet compiled, "
         "for recompiling with your own edgetpu_compiler.",
         ["axis1_cifar100/tflite_int8/*"],
     ),
     "axis1-pytorch": (
-        "11.8 GiB, 412 files. Baselines and pruned checkpoints, PyTorch. Only "
+        "11.75 GiB, 412 files. Baselines and pruned checkpoints, PyTorch. Only "
         "needed to re-derive the TFLite models or to inspect the masks.",
         ["axis1_cifar100/baselines/*", "axis1_cifar100/pruned_pytorch/*"],
     ),
     "axis1-logs": (
-        "12 MiB, 411 files. Per-run logs: accuracies with confidence intervals, "
+        "12 MiB, 410 files. Per-run logs: accuracies with confidence intervals, "
         "achieved pruning rates, per-layer surviving structure.",
         ["axis1_cifar100/logs/*"],
     ),
@@ -87,7 +87,7 @@ SETS: dict[str, tuple[str, list[str]]] = {
         ["synthetic/metadata/*", "synthetic/compile_reports/*"],
     ),
     "measurements": (
-        "0.13 GiB, 22 files. Every benchmark CSV. Start here: this is what the "
+        "0.12 GiB, 21 files. Every benchmark CSV. Start here: this is what the "
         "results are computed from, and it is small.",
         ["measurements/*"],
     ),
@@ -102,7 +102,7 @@ def print_sets() -> None:
         for line in _wrap(desc, 72):
             print(f"      {line}")
         print()
-    print("  --all      everything, 37.5 GiB across 7486 files")
+    print("  --all      everything, 37.38 GiB across 7479 files")
 
 
 def _wrap(text: str, width: int) -> list[str]:
@@ -125,7 +125,7 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="Show the subsets and exit")
     ap.add_argument("--set", nargs="+", metavar="NAME", help="Named subsets to fetch")
     ap.add_argument("--patterns", nargs="+", help="Explicit glob patterns instead")
-    ap.add_argument("--all", action="store_true", help="Fetch everything (37.5 GiB)")
+    ap.add_argument("--all", action="store_true", help="Fetch everything (37.38 GiB)")
     ap.add_argument("--out", default="models", help="Destination directory")
     ap.add_argument("--repo", default=REPO)
     args = ap.parse_args()

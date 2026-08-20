@@ -3,7 +3,7 @@
 Every model measured in this study is published at
 **https://huggingface.co/mouad-zouhdi/sparta-edgetpu-models**
 
-37.5 GiB across 7486 files, which is why it is hosted there rather than in this
+37.38 GiB across 7479 files, which is why it is hosted there rather than in this
 repository.
 
 ## Download
@@ -12,7 +12,7 @@ repository.
 python setup/fetch_models.py --list                       # what is available
 python setup/fetch_models.py --set measurements --out models/
 python setup/fetch_models.py --set axis1-edgetpu --out models/
-python setup/fetch_models.py --all --out models/          # 37.5 GiB
+python setup/fetch_models.py --all --out models/          # 37.38 GiB
 ```
 
 Start with `measurements`: 0.13 GiB of CSVs, which is what every result in the
@@ -63,21 +63,21 @@ hardware, or extended without repeating several thousand GPU-hours of pruning.
 
 | Path | Files | Size | What it is |
 |---|---:|---:|---|
-| `axis1_cifar100/baselines/` | 7 | 0.4 GiB | CIFAR-100 baselines, PyTorch |
-| `axis1_cifar100/pruned_pytorch/` | 405 | 11.4 GiB | pruned and recovered, PyTorch |
-| `axis1_cifar100/tflite_int8/` | 418 | 3.1 GiB | quantized, before compilation |
-| `axis1_cifar100/edgetpu/` | 410 | 3.2 GiB | **compiled binaries, the ones benchmarked** |
-| `axis1_cifar100/logs/` | 411 | 12 MiB | per-run logs, accuracies, layer structures |
-| `axis2_imagenet/pruned_pytorch/` | 38 | 1.2 GiB | final models + the PREFT checkpoints that won their loop |
-| `axis2_imagenet/edgetpu/` | 1548 | 8.0 GiB | **compiled segments, 1 to 8 per model** |
+| `axis1_cifar100/baselines/` | 7 | 0.38 GiB | CIFAR-100 baselines, PyTorch |
+| `axis1_cifar100/pruned_pytorch/` | 405 | 11.37 GiB | pruned and recovered, PyTorch |
+| `axis1_cifar100/tflite_int8/` | 411 | 2.97 GiB | quantized, before compilation |
+| `axis1_cifar100/edgetpu/` | 410 | 3.20 GiB | **compiled binaries, the ones benchmarked** |
+| `axis1_cifar100/logs/` | 410 | 12 MiB | per-run logs, accuracies, layer structures |
+| `axis2_imagenet/pruned_pytorch/` | 38 | 1.15 GiB | final models + the PREFT checkpoints that won their loop |
+| `axis2_imagenet/edgetpu/` | 1548 | 8.00 GiB | **compiled segments, 1 to 8 per model** |
 | `axis2_imagenet/logs/` | 392 | 4 MiB | training logs, pipeline summaries, compiler reports |
-| `synthetic/tflite_int8/` | 307 | 8.0 GiB | synthetic corpus, quantized |
-| `synthetic/edgetpu/` | 656 | 2.2 GiB | **compiled, N = 1 to 8** |
+| `synthetic/tflite_int8/` | 307 | 8.01 GiB | synthetic corpus, quantized |
+| `synthetic/edgetpu/` | 656 | 2.16 GiB | **compiled, N = 1 to 8** |
 | `synthetic/metadata/` | 416 | 2 MiB | structural metadata, successes and failures alike |
 | `synthetic/compile_reports/` | 2456 | 12 MiB | per (model, N) compiler reports |
-| `measurements/` | 22 | 0.13 GiB | every benchmark CSV |
+| `measurements/` | 21 | 0.12 GiB | every benchmark CSV, plus a README explaining each |
 
-Total: 7486 files, 37.5 GiB.
+Total: 7479 files, 37.38 GiB.
 
 ## What is deliberately NOT here
 
