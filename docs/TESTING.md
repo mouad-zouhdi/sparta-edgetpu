@@ -119,6 +119,32 @@ than against the docstring:
 | Model-zoo loaders return the published architectures | all eight matched their parameter counts to the tenth of a million |
 | The size target implies the rate | ResNet-50 at 8 MB resolved to 68.7 %, against the 69 % on record |
 
+### The pipeline reproduces its own central claim
+
+The most useful thing the end-to-end run produced was not a pass mark. Compiling
+the ten pruned models, all at the same achieved rate of 30.0 to 30.2 %, gives:
+
+| Criterion | Off-chip streamed (MiB) |
+|---|---:|
+| lamp | 0.07 |
+| hrank | 0.13 |
+| fpgm | 0.34 |
+| taylor | 0.47 |
+| magnitude_l2 | 0.50 |
+| magnitude_l1 | 0.51 |
+| random | 0.54 |
+| bn_scale | 0.56 |
+| fisher | 0.72 |
+| obdc | 0.91 |
+
+A **12.4x spread in streamed volume at identical parameter reduction**, from
+models given two fine-tuning epochs on a five-epoch baseline. Streamed weights
+are re-transferred on every inference, at roughly 3.3 ms/MiB over USB, so that
+spread is latency the parameter count does not predict.
+
+This is the claim the whole study rests on, produced by the released code in a
+test run rather than asserted in prose.
+
 ## What is NOT covered
 
 **Anything requiring the accelerators.** The benchmark scripts
