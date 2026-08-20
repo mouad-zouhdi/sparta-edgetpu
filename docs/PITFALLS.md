@@ -157,29 +157,28 @@ launching, and run the parallel benchmark only after the pipeline phases.
 
 ### 15. Never compare a range against a standard deviation
 
-This produced a wrong published-adjacent claim. A 12.45 % **range** over 990
-draws was compared against a 0.63 % **standard deviation** and read as an effect.
-There was none: F = 0.905, p = 0.94.
+A range over many draws will always exceed a standard deviation, so reading the
+comparison as an effect manufactures one. Compare like with like, and test it.
 
-Related: never estimate a within-group variance on fewer than about 20 degrees of
-freedom. Estimates on 9 and 15 suggested an effect at p = 0.002 that does not
-exist.
+Related: do not estimate a within-group variance on fewer than about 20 degrees
+of freedom. Small samples will happily suggest an effect that a proper test
+rejects.
 
 ### 16. pycoral's `PipelinedModelRunner` inflates latency — **silent**
 
-It reports 50 ms to 17 s for models whose real inference is under 5 ms. It is
-built for throughput and queues work accordingly, so its per-item timing is not a
-latency. Its **throughput** figures are fine.
+It is built for throughput and queues work accordingly, so its per-item timing
+is not an end-to-end latency and can exceed the real one by orders of magnitude.
+Its **throughput** figures are fine.
 
 Correct pipeline latency needs manual segment chaining; see
 `multi_tpu/bench/bench_latency_chained.py`.
 
 ### 17. Fixing a training budget from a predicted pruning rate — **silent**
 
-The guided loop converges 6 to 35 points deeper than the "bytes ~ parameters"
-prediction. Budgets fixed in advance from the predicted rate under-trained
-several runs, and the shortfall **correlated with architecture**, which biased a
-comparison between model families in a way that was invisible in the outputs.
+The guided loop converges deeper than a parameter-count prediction suggests, so
+a budget fixed in advance from the predicted rate under-trains the deepest runs.
+The shortfall is not random either: it tracks the architecture, which biases any
+comparison between model families, invisibly.
 
 Always derive the budget from the achieved rate, after convergence. See
 `FT_BUDGET_BANDS` and step [3b] in `multi_tpu/pipeline_full.py`.
@@ -192,17 +191,16 @@ and nothing in the output reveals it.
 
 ### 19. `off_chip` is not monotonic in N
 
-A ResNet-101 checkpoint fits at 6 segments, overflows by 2.02 MiB at 7, and fits
-again at 8. The segmentation heuristic does not optimise for fitting, so a
-failure at N does not rule out N+1.
+A checkpoint can fit at N segments, overflow at N+1, and fit again at N+2. The
+compiler's segmentation heuristic balances on another criterion and does not
+optimise for fitting, so a failure at N does not rule out N+1.
 
 ### 20. Recompute data-driven importance at every pruning step
 
 `torch_pruning` rebases channel indices after each removal. Scores cached once
-are then read through indices that no longer denote the same channels, and the
-pruning becomes effectively random. Observed on HRank: 1.00 % validation accuracy
-with a one-shot cache (chance level on 100 classes) against 49.84 % with
-recomputation.
+are then read through indices that no longer denote the same channels, so the
+pruning becomes effectively random while still completing without error. The
+symptom is chance-level accuracy from a run that looks healthy.
 
 ### 21. Use the achieved pruning rate, not the target
 

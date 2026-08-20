@@ -1,560 +1,444 @@
 # SPARTA — Structured pruning on Edge TPU accelerators
 
 Measurement framework for **structured pruning** of convolutional networks
-deployed on **Google Coral Edge TPU** accelerators, across two hardware regimes:
-a single accelerator (Raspberry Pi 4 + Coral USB) and an eight-accelerator PCIe
-card (ASUS CRL-G18U-P3DF).
+deployed on **Google Coral Edge TPU** accelerators, in two hardware regimes: a
+single accelerator (Raspberry Pi 4 with a Coral USB stick) and an
+eight-accelerator PCIe card (ASUS CRL-G18U-P3DF).
 
-The question it exists to answer is not "how much accuracy does pruning cost",
-which is well covered elsewhere, but **how a pruning mask turns into latency on
-real hardware**. Those are not the same thing, and the gap between them is where
-the results live.
-
-> Internship work at LAAS-CNRS. Author: Mouad Zouhdi (`mouad.zouhdi@laas.fr`).
+> Internship work at LAAS-CNRS. Author: Mouad Zouhdi.
 
 ---
 
-## The central finding, in one paragraph
+## What this is for
 
-An Edge TPU holds about **8 MB of parameters in on-chip SRAM**. Parameters that
-fit are loaded once and reused; parameters that do not fit are **re-streamed
-across the host bus on every single inference**. That boundary, not the operation
-count, dominates latency.
+The framework exists to measure how a structured-pruning mask behaves once the
+model actually runs on an Edge TPU, rather than how much accuracy it costs. It
+provides the tooling to:
 
-The consequence is that pruning does not deliver its arithmetic saving. Two
-criteria that remove the same fraction of parameters, at the same accuracy, can
-produce different speedups, because they distribute sparsity differently across
-layers and therefore land on different sides of that boundary. The ranking
-between criteria can invert between the SRAM-resident regime and the streaming
-regime. The algorithm never sees the hardware; what changes is the mapping from
-mask to latency.
+- train baselines, prune them under a chosen criterion, and recover accuracy;
+- quantize to INT8 and compile for the accelerator;
+- measure latency, accuracy, throughput and the compiler's memory split, and
+  write all of it to CSV.
 
-Quantitatively, the measured latency model is:
+An Edge TPU holds a limited amount of parameters in on-chip SRAM; anything above
+that is streamed from host memory. The compiler reports that split, and the
+benchmarks record it alongside the timings, so the two can be related.
 
-```
-steady-state latency  = C + k·E
-first-inference cost  = C + k·E + k·I + c
-```
+The repository covers three bodies of work:
 
-with `C` the compute time, `E` the parameter volume streamed from off-chip on
-every inference, `I` the volume cached in SRAM once, `k` the transfer cost per
-MiB and `c` a fixed overhead. Measured values:
-
-| Quantity | Value | Method |
+| Directory | Corpus | What varies |
 |---|---|---|
-| `k` (USB, Pi 4) | **3.3 ms/MiB** = 307 MiB/s | first- minus second-inference gap, 7 architectures |
-| `c` (USB) | **0.43 ms** | same fit, max residual 0.47 ms |
-| `k` (PCIe) | **2.67 ms/MiB** = 375 MiB/s | 116 synthetic models + an overlap term, R² = 0.92 |
-| overlap | **58 %** of compute time masks loading | two-variable regression |
-
-The decomposition is not merely a fitted form. The four USB models that stream
-all pay nearly the same first-inference surcharge (25.1 to 25.5 ms, agreeing to
-1.6 %) although their total sizes range from 10.8 to 35.1 MiB. What they share is
-not size but **internal volume**: 7.58 to 7.66 MiB.
-
-An independent measurement (Gao, Choi and Wang, RTSS 2025 WiP) reports
-340 MiB/s host-to-device on a Coral USB with a Pi 5, against our 307 MiB/s on a
-Pi 4: 11 % apart, in the expected direction.
+| `mono_tpu/` | CIFAR-100, 7 architectures | pruning criterion and target rate |
+| `multi_tpu/` | ImageNet, 8 architectures | size target and number of accelerators |
+| `synthetic/` | 400 generated CNNs | topology, depth, width, input resolution |
 
 ---
 
 ## Repository layout
 
 ```
-setup/            environment creation and upstream patches
+setup/            environment creation, model download and upload
 requirements/     one pinned dependency set per environment
-mono_tpu/         axis 1 — CIFAR-100, 7 architectures x 7 criteria x 9 targets
-multi_tpu/        axis 2 — ImageNet, size-targeted pruning, N-segment pipelines
+mono_tpu/         single-accelerator pipeline (CIFAR-100)
+multi_tpu/        multi-accelerator pipeline (ImageNet)
   bench/          pipeline, parallel and cold-start benchmarks
-synthetic/        400-configuration factorial CNN generator
-docs/             pitfalls and hardware notes
+synthetic/        factorial CNN generator
+docs/             pitfalls, model catalogue, testing notes
+run_pipeline_mono_tpu.sh    runs the single-accelerator pipeline
+run_pipeline_multi_tpu.sh   runs the multi-accelerator pipeline
 ```
 
-Every script carries a header explaining what it produces and why it works the
-way it does, and every function has a docstring. Start with the header of the
-script you intend to run.
+Every script begins with a header describing what it produces and how it works,
+and every function has a docstring. Start with the header of the script you
+intend to run, or with `--help`.
 
 ---
 
-## Two experimental axes
+## Installation
 
-### Axis 1 — comparing pruning criteria (`mono_tpu/`)
+```bash
+./setup/setup_envs.sh                      # creates envs/{pytorch,coral,synth}-env
+./setup/setup_envs.sh --edgetpu-compiler   # instructions for the compiler
+./setup/setup_envs.sh pytorch coral        # a subset
+```
 
-Seven CIFAR-100 architectures, seven importance criteria, nine pruning targets,
-each an independent run from the baseline: **441 combinations, 404 successful**.
-The 37 failures are known criterion/architecture incompatibilities, listed in
-`mono_tpu/01_prune.py`, not lost data.
+Three environments are required because they are mutually incompatible:
+`pycoral` ships wheels for Python 3.6 to 3.9 only, while `onnx2tf` 2.x needs
+3.12, and installing TensorFlow next to `onnx2tf` moves the pins the PyTorch
+conversion path depends on. `coral-env` deliberately contains no torch, since it
+is deployed to a Raspberry Pi.
 
-| Architecture | Params | Baseline top-1 |
-|---|---:|---:|
-| resnet18 | 11.2 M | 76.89 % |
-| resnet50 | 23.7 M | 77.81 % |
-| vgg19 | 20.1 M | 73.49 % |
-| wrn_28_10 | 36.5 M | 81.10 % |
-| mobilenetv2 | 2.4 M | 64.86 % |
-| googlenet | 5.7 M | 77.49 % |
-| squeezenet1_1 | 0.8 M | 55.50 % |
+| Environment | Python | Used by |
+|---|---|---|
+| `pytorch-env` | 3.12 | training, pruning, PyTorch to TFLite conversion |
+| `coral-env` | 3.9 | Edge TPU compilation, inference, benchmarking |
+| `synth-env` | 3.12 | the synthetic generator |
 
-Criteria: `magnitude_l1`, `magnitude_l2`, `bn_scale`, `fpgm`, `taylor`, `obdc`,
-`random`, plus `lamp`, `fisher`, `group_lasso` and `hrank`. The protocol follows
-**PruningBench** (Li et al. 2024, arXiv:2406.12315) so results stay comparable
-with that leaderboard: one uniform recipe for every architecture, deliberately
-untuned per model.
+`edgetpu_compiler` is a closed-source Google binary, x86-64 Linux only, and is
+not a Python package. All results here were produced with version 16.0.
 
-`random` is not filler. It is the control that separates what a criterion
-contributes from what merely removing capacity and retraining contributes.
+---
 
-### Axis 2 — fitting real models to N accelerators (`multi_tpu/`)
+## Running a pipeline
+
+Two scripts run a complete pipeline end to end, one per axis. Every parameter is
+a variable in a CONFIGURATION block at the top of the file, each with a comment
+saying what it does and what to change it to.
+
+```bash
+./run_pipeline_mono_tpu.sh --help      # single accelerator, CIFAR-100
+./run_pipeline_multi_tpu.sh --help     # multiple accelerators, ImageNet
+```
+
+```bash
+./run_pipeline_mono_tpu.sh             # every stage, with the settings in the file
+./run_pipeline_mono_tpu.sh --smoke     # minutes, to check the setup
+./run_pipeline_mono_tpu.sh --from 02   # resume at a stage
+./run_pipeline_mono_tpu.sh --only 04   # a single stage
+./run_pipeline_mono_tpu.sh --dry-run   # print the commands, run nothing
+```
+
+Any variable can be overridden from the environment without editing the file:
+
+```bash
+MODELS="resnet18 vgg19" CRITERIA="taylor random" TARGETS="30 60" \
+    ./run_pipeline_mono_tpu.sh
+
+MODELS="resnet50 inception_v4" TARGETS_MB="8 16" \
+    ./run_pipeline_multi_tpu.sh
+```
+
+`--smoke` shrinks every cost knob at once: one model, one criterion, minimal
+epochs. It exercises the same code paths as a real run and the numbers it
+produces mean nothing, which is the point. Run it first on a new machine.
+
+Stages needing hardware are skipped with a message when the hardware is absent,
+so the scripts are usable on a workstation without a Coral device. Each stage can
+also be run on its own; `--dry-run` prints the exact command for every one.
+
+## The single-accelerator pipeline (`mono_tpu/`)
+
+Seven CIFAR-100 architectures (`resnet18`, `resnet50`, `vgg19`, `wrn_28_10`,
+`mobilenetv2`, `googlenet`, `squeezenet1_1`), eleven pruning criteria
+(`magnitude_l1`, `magnitude_l2`, `bn_scale`, `fpgm`, `taylor`, `obdc`, `random`,
+`lamp`, `fisher`, `group_lasso`, `hrank`) and any set of target rates. Each
+combination is an independent run starting from the baseline.
+
+The protocol follows **PruningBench** (Li et al. 2024, arXiv:2406.12315): one
+uniform recipe for every architecture, so results stay comparable with that
+leaderboard.
+
+| Stage | Script | Environment |
+|---|---|---|
+| 00 | `00_prepare_baselines.py` | pytorch-env |
+| 01 | `01_prune.py` | pytorch-env |
+| — | `aggregate_pruning_logs.py` | pytorch-env |
+| 02 | `02_convert_tflite_int8.py` | pytorch-env |
+| 03 | `03_compile_edgetpu.py` | coral-env |
+| 04 | `04_benchmark.py` | coral-env |
+| 05 | `05_benchmark_coldstart.py` | coral-env |
+
+Some criterion and architecture pairs do not apply: `bn_scale` needs BatchNorm,
+and `obdc` does not support depthwise convolutions or Fire modules. Those runs
+are logged and skipped rather than aborting the sweep.
+
+## The multi-accelerator pipeline (`multi_tpu/`)
 
 Eight ImageNet architectures (GoogLeNet, BN-Inception, Inception V3/V4,
 Inception-ResNet-V2, ResNet-50/101/152), pruned from published weights to a
-**size target** rather than to a grid, then compiled across N segments with
-`edgetpu_compiler --num_segments N`:
+**size target** rather than to a fixed rate, then compiled across N segments with
+`edgetpu_compiler --num_segments N` so that N accelerators share the load.
 
-| INT8 target | Segments | Multi-TPU configuration |
+| Size target | Segments | Configuration |
 |---|---|---|
 | 8 MB | 1 | 8 independent models in parallel |
 | 16 MB | 2 | 4 pipelines of 2 accelerators |
 | 32 MB | 4 | 2 pipelines of 4 |
 | 64 MB | 8 | 1 pipeline across all 8 |
 
-**Pruning to a parameter count does not make a model fit.** The compiler reports
-consistently more bytes than the weight count implies, and the gap grows as the
-model shrinks. Regressed over the guided loop's own iterations:
+`pipeline_full.py` drives the whole thing: it prunes, quantizes, compiles, reads
+how many bytes the compiler still streams off-chip, and prunes further if any
+remain, before launching the recovery fine-tuning. Every iteration is recorded in
+a pipeline summary JSON.
 
-| Model | Slope (MiB per MiB of params) | Fixed overhead |
-|---|---:|---:|
-| ResNet-101 | 0.962 ± 0.013 | **2.29 ± 0.36 MiB** |
-| Inception-V4 | 1.027 ± 0.011 | **2.86 ± 0.32 MiB** |
-| Inception-ResNet-V2 | 0.970 ± 0.009 | **5.24 ± 0.28 MiB** |
+| Stage | Script | Environment |
+|---|---|---|
+| 00 | `00_fetch_and_convert_pretrained.py` | pytorch-env |
+| — | `pipeline_full.py` (drives 01 to 03) | pytorch-env + compiler |
+| 01 | `01_prune_imagenet.py` | pytorch-env |
+| 02 | `02_convert_pruned.py` | pytorch-env |
+| 03 | `03_compile_edgetpu_segments.py` | coral-env |
+| — | `verify_tpu.py` | coral-env |
+| bench | `bench/bench_pipeline.py`, `bench_parallel.py`, `bench_coldstart_*.py`, `bench_latency_chained.py` | coral-env |
 
-The slope near 1.0 confirms the INT8 one-byte-per-weight assumption. It is the
-**constant** the naive prediction ignores, and it does not shrink with pruning:
-fused batch-norm constants, int32 biases and per-tensor alignment padding all
-scale with the number of tensors and channels, not with the number of weights.
-Architectures with many branches and 1x1 convolutions suffer most. For
-Inception-ResNet-V2 at one segment, of roughly 6.1 MiB fitting in SRAM, 3.9 MiB
-are overhead and only 2.2 MiB are weights, which is why it converges at 95 %
-pruned rather than the 86 % arithmetic suggests.
+## The synthetic generator (`synthetic/`)
 
-`pipeline_full.py` therefore **measures instead of predicting**: prune, quantize,
-compile, read the compiler's off-chip figure, and prune again by that much if
-anything still streams. Convergence takes 2-3 iterations and lands 6 to 35 points
-deeper than the naive prediction.
+400 configurations: 5 topology families (`sequential`, `residual`, `dense`,
+`branched_2way`, `branched_4way`) x 4 depths x 5 widths x 4 input resolutions.
+The networks are never trained; they exist to sample memory and transfer
+behaviour more densely than a handful of real models can.
 
-### Synthetic corpus (`synthetic/`)
+```bash
+python synthetic/generate_sweep.py --workers 2 --num_calib 100 --skip-existing
+python synthetic/compile_sweep.py --tflite-dir outputs/tflite --out-root outputs_pipeline
+```
 
-400 configurations: 5 topology families x 4 depths x 5 widths x 4 resolutions,
-sampling memory and transfer behaviour far more densely than 15 real models can.
-Nothing is trained; these networks exist to be measured, not to classify.
+Conversion goes through `onnx2tf`'s `flatbuffer_direct` backend rather than
+`TFLiteConverter`; `synthetic/build_one.py` explains why and checks that the
+produced file took that path.
 
 ---
 
-## Quick start
+## Models and measurements
+
+Every model measured with this framework, and every benchmark CSV, is published
+separately because the collection is about 37 GB. See `docs/MODELS.md`.
 
 ```bash
-./setup/setup_envs.sh                  # creates envs/{pytorch,coral,synth}-env
-./setup/setup_envs.sh --edgetpu-compiler
+python setup/fetch_models.py --list                        # what is available
+python setup/fetch_models.py --set measurements --out models/
+python setup/fetch_models.py --set axis1-edgetpu --out models/
 ```
-
-Three environments, because they are mutually incompatible: `pycoral` ships
-wheels for Python 3.6-3.9 only while `onnx2tf` 2.x needs 3.12, and installing
-TensorFlow next to `onnx2tf` breaks the pins the PyTorch conversion path depends
-on. `coral-env` deliberately has no torch: it is deployed to a Raspberry Pi.
-
-### Axis 1, end to end
-
-```bash
-P=envs/pytorch-env/bin/python ; C=envs/coral-env/bin/python
-$P mono_tpu/00_prepare_baselines.py --output_dir models --data_dir data
-$P mono_tpu/01_prune.py --data_dir data --num_classes 100 \
-      --checkpoints 10 20 30 40 50 60 70 80 90
-$P mono_tpu/02_convert_tflite_int8.py --data_dir data --num_calib 100
-$C mono_tpu/03_compile_edgetpu.py
-$C mono_tpu/04_benchmark.py --device both --warmup 30 --runs 200 --num_images 0
-$C mono_tpu/05_benchmark_coldstart.py --device both --passes 30
-$P mono_tpu/aggregate_pruning_logs.py
-```
-
-### Axis 2, one model at one target
-
-```bash
-$P multi_tpu/00_fetch_and_convert_pretrained.py --models resnet50
-$P multi_tpu/pipeline_full.py --model resnet50 --target_mb 16 \
-      --importance taylor --data_dir /datasets/Imagenet_1k \
-      --epochs_from_actual --run_tag N2
-```
-
-### Synthetic corpus
-
-```bash
-S=envs/synth-env/bin/python
-$S synthetic/generate_sweep.py --workers 2 --num_calib 100 --skip-existing
-$C synthetic/compile_sweep.py --tflite-dir outputs/tflite --out-root outputs_pipeline
-$C multi_tpu/bench/bench_pipeline.py --phase all
-$C multi_tpu/bench/bench_parallel.py --mode both --orchestrate --resume
-```
-
-Run the parallel benchmark **after** the pipeline phases, never alongside: two
-processes competing for the accelerators crash each other.
-
----
-
-## Pretrained models and measured artefacts
-
-Every model measured here is published separately on the Hugging Face Hub,
-because the collection is about 37 GB and exceeds what a git repository should
-carry. See `docs/MODELS.md` for the layout and a download script.
 
 ---
 
 # Benchmark metrics
 
-Every benchmark writes a CSV. This section documents each column.
+Every benchmark writes a CSV. This section defines each column.
 
 Two conventions hold throughout:
 
-- **A missing measurement is written as an empty field, never as zero.** A zero
-  is a measured value; an empty field means the measurement was not made.
-- **Signed deltas are negative for a loss.** `quant_drop_top1 = -1.2` means
-  quantization cost 1.2 points of top-1.
+- **A missing measurement is written as an empty field, never as zero**, so an
+  absent value is never mistaken for a measured one.
+- **Signed deltas are negative for a loss.** `quant_drop_top1 = -1.2` means 1.2
+  points of top-1 were lost.
 
 ---
 
-## `benchmark_results.csv` — steady-state, single TPU
+## `benchmark_results.csv` — steady-state, single accelerator
 
-Produced by `mono_tpu/04_benchmark.py`. One row per model. Cumulative: running
-with `--device cpu` and later `--device tpu` fills in the same file, and the
-derived metrics are recomputed each pass from whatever is present.
+Written by `mono_tpu/04_benchmark.py`, one row per model. The file is cumulative:
+running with `--device cpu` and later `--device tpu` fills in the same file, and
+the derived columns are recomputed each pass from whatever is present.
 
 ### Identity
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
 | `model` | full model name, e.g. `resnet18_pruned50pct_taylor` |
-| `tag` | `finetuned` (the baseline) or `pruned` |
+| `tag` | `finetuned` for a baseline, `pruned` otherwise |
 | `importance` | pruning criterion; empty for a baseline |
-| `prune_pct` | **requested** target, in % of parameters |
+| `prune_pct` | the **requested** target, in % of parameters |
 
-> **Use `param_reduction_pct`, not `prune_pct`, on every axis and in every
-> correlation.** Global pruning removes whole dependency groups of varying size,
-> so the achieved rate is never exactly the target. Plotting against the target
-> silently misplaces every point.
+`param_reduction_pct` below is the **achieved** reduction. The two differ,
+because global pruning removes whole dependency groups of varying size. Use the
+achieved value on plots and in correlations.
 
 ### Size and cost
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
-| `size_int8_mib` | INT8 `.tflite` file size |
+| `size_int8_mib` | size of the INT8 `.tflite` file |
 | `params_int8` | parameter count in the quantized model |
 | `macs_int8` | estimated multiply-accumulate operations per inference |
 
-### Memory regime (from the compiler report)
-
-| Column | Meaning |
-|---|---|
-| `tpu_on_chip_mib` | parameters cached in SRAM |
-| `tpu_off_chip_mib` | parameters streamed **on every inference** |
-| `tpu_streaming_ratio` | off-chip / total |
-| `tpu_sram_util_pct` | SRAM occupancy, against the ~8 MB budget |
-| `tpu_subgraphs` | Edge TPU subgraph count |
-| `tpu_ops_count`, `cpu_ops_count` | operations mapped to each device |
-| `tpu_ops_coverage_pct` | share of operations running on the accelerator |
-
-`tpu_off_chip_mib == 0` is the decisive property. It separates the two regimes
-and explains most of the variance in `tpu_realization_efficiency` below. A few
-CPU operations at the tail (softmax, reshape) are normal; a large `cpu_ops_count`
-means part of the graph fell back to the host and the latency is not measuring
-what you think.
-
-### Accuracy
-
-| Column | Meaning |
-|---|---|
-| `top1_cpu_f32_pct`, `top5_cpu_f32_pct` | FP32 reference |
-| `top1_int8_pct`, `top5_int8_pct` | after quantization, measured **on the TPU** |
-| `*_ci95_lo`, `*_ci95_hi` | bootstrap 95 % confidence bounds |
-| `n_eval_acc` | images evaluated (10 000 for the full test set) |
-
-INT8 accuracy comes from the Edge TPU, not from the INT8 CPU path, for two
-reasons: the compiler's kernels are not bit-identical to the CPU ones, so the
-target hardware's number is the honest one; and the Coral stack's
-`tflite_runtime` 2.5 misreads models produced by `ai-edge-quantizer`, collapsing
-their output onto the zero point and reporting chance-level accuracy **without
-raising**.
-
-The confidence intervals are what make a difference interpretable. Without them,
-a 0.3-point gap between two criteria cannot be distinguished from evaluation
-noise.
-
-### Latency and throughput
-
-| Column | Meaning |
-|---|---|
-| `lat_{cpu,tpu}_{f32,int8}_ms_{mean,std,median,p95,p99}` | steady-state latency |
-| `lat_*_cv` | coefficient of variation, std / mean |
-| `throughput_{cpu_f32,cpu_int8,tpu_int8}_fps` | inferences per second |
-
-**Steady state** means: warmup inferences discarded, then N inferences timed on
-one interpreter that stays alive. Model loading and the first-inference weight
-transfer are excluded, and only `invoke()` is inside the timed region; input
-preparation is host-side work and stays outside it.
-
-Mean and median are both kept because they disagree when the distribution is
-skewed by scheduling noise; p95 and p99 say whether that skew is a tail or a
-shift. Cold-start costs are measured separately, see below.
-
-### Derived: accuracy deltas
-
-| Column | Definition | Isolates |
-|---|---|---|
-| `quant_drop_top{1,5}` | INT8 − FP32, same weights | the cost of quantization alone |
-| `prune_drop_top{1,5}_f32` | pruned − baseline, both FP32 | the cost of pruning alone |
-| `prune_drop_top{1,5}_i8` | pruned − baseline, both INT8 | pruning, after quantization |
-| `combined_drop_top{1,5}` | pruned INT8 − baseline FP32 | what a user actually gives up |
-
-`quant_drop_top1` is only interpretable because quantization is post-training.
-With quantization-aware training the weights would adapt, and the number would
-measure the training rather than the model. As it stands it measures how
-quantization-friendly each criterion's output is, which is a property of the
-mask.
-
-### Derived: speedups
+### Memory split, from the compiler report
 
 | Column | Definition |
 |---|---|
-| `tpu_speedup_int8` | CPU INT8 latency / TPU INT8 latency |
-| `quant_speedup_cpu` | CPU FP32 / CPU INT8 |
-| `prune_speedup_{cpu,tpu}` | baseline latency / pruned latency |
-| `theoretical_speedup_macs` | baseline MACs / pruned MACs |
-| **`tpu_realization_efficiency`** | `prune_speedup_tpu / theoretical_speedup_macs` |
+| `tpu_on_chip_mib` | parameters cached in on-chip SRAM |
+| `tpu_off_chip_mib` | parameters streamed from host memory on each inference |
+| `tpu_streaming_ratio` | off-chip divided by total |
+| `tpu_sram_util_pct` | SRAM occupancy against the device budget |
+| `tpu_subgraphs` | number of Edge TPU subgraphs |
+| `tpu_ops_count`, `cpu_ops_count` | operations mapped to each device |
+| `tpu_ops_coverage_pct` | share of operations running on the accelerator |
 
-`tpu_realization_efficiency` is the central quantity of the whole study: **the
-fraction of the arithmetic saving that the hardware actually delivers.** A value
-near 1 means the model was compute-bound and pruning paid off as predicted. Well
-below 1 means it is limited by weight transfer, and that is exactly where two
-criteria at equal accuracy stop being interchangeable.
+A large `cpu_ops_count` means part of the graph fell back to the host, and the
+measured latency then includes host-side work. A few operations at the tail
+(softmax, reshape) are normal.
 
-### Derived: compression
+### Accuracy
 
-`param_reduction_pct`, `size_reduction_pct`, `macs_reduction_pct`,
-`compression_ratio` — all against the baseline of the same architecture.
+| Column | Definition |
+|---|---|
+| `top1_cpu_f32_pct`, `top5_cpu_f32_pct` | FP32 reference accuracy |
+| `top1_int8_pct`, `top5_int8_pct` | accuracy after quantization, measured on the accelerator |
+| `*_ci95_lo`, `*_ci95_hi` | bootstrap 95 % confidence bounds |
+| `n_eval_acc` | number of images evaluated |
+
+INT8 accuracy is taken from the Edge TPU rather than from the INT8 CPU path: the
+compiler's kernels are not bit-identical to the CPU ones, and the Coral stack's
+`tflite_runtime` 2.5 misreads models produced by `ai-edge-quantizer` without
+raising an error.
+
+### Latency and throughput
+
+| Column | Definition |
+|---|---|
+| `lat_{cpu,tpu}_{f32,int8}_ms_{mean,std,median,p95,p99}` | steady-state latency |
+| `lat_*_cv` | coefficient of variation, std over mean |
+| `throughput_{cpu_f32,cpu_int8,tpu_int8}_fps` | inferences per second |
+
+Steady state means: warmup inferences discarded, then N inferences timed on one
+interpreter that stays alive. Model loading and the first-inference weight
+transfer are therefore excluded, and only `invoke()` is inside the timed region.
+`cold_start_results.csv` covers the excluded part.
+
+### Accuracy deltas
+
+| Column | Definition |
+|---|---|
+| `quant_drop_top{1,5}` | INT8 minus FP32, same weights |
+| `prune_drop_top{1,5}_f32` | pruned minus baseline, both FP32 |
+| `prune_drop_top{1,5}_i8` | pruned minus baseline, both INT8 |
+| `combined_drop_top{1,5}` | pruned INT8 minus baseline FP32 |
+
+### Speedups and compression
+
+| Column | Definition |
+|---|---|
+| `tpu_speedup_int8` | CPU INT8 latency divided by TPU INT8 latency |
+| `quant_speedup_cpu` | CPU FP32 divided by CPU INT8 |
+| `prune_speedup_{cpu,tpu}` | baseline latency divided by pruned latency |
+| `theoretical_speedup_macs` | baseline MACs divided by pruned MACs |
+| `tpu_realization_efficiency` | `prune_speedup_tpu` divided by `theoretical_speedup_macs` |
+| `param_reduction_pct`, `size_reduction_pct`, `macs_reduction_pct` | reductions against the baseline |
+| `compression_ratio` | baseline size divided by pruned size |
 
 ---
 
-## `cold_start_results.csv` — first-inference cost, single TPU
+## `cold_start_results.csv` — first-inference cost
 
-Produced by `mono_tpu/05_benchmark_coldstart.py`. One row per model, with the
-block below repeated for each of `cpu_int8`, `cpu_f32` and `tpu_int8`:
+Written by `mono_tpu/05_benchmark_coldstart.py`, one row per model, with the
+block below repeated for `cpu_int8`, `cpu_f32` and `tpu_int8`:
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
 | `<mode>_n_passes` | passes recorded for this mode |
-| `<mode>_cold_{mean,std,median,p95,p99,min,max,cv,n}` | position 1: the genuinely cold inference |
-| `<mode>_steady_{...}` | positions 6-10 pooled: after warm-up |
+| `<mode>_cold_{mean,std,median,p95,p99,min,max,cv,n}` | position 1: the first inference after loading |
+| `<mode>_steady_{...}` | positions 6 to 10 pooled: after warm-up |
 
-**`cold_mean − steady_mean` is the quantity of interest.** It is the weight
-transfer, and combined with the model's internal and external volumes it yields
-the transfer coefficient `k` in the model at the top of this README.
-
-Protocol: one pass is N inferences on a **fresh** interpreter, then the next
-model. Model order is reshuffled between passes, which is not cosmetic: without
-it, any effect drifting over the run (thermal throttling above all) is absorbed
-into the per-model result, making the models measured last look uniformly slower
-with no trace of the bias in the output.
+One pass is N inferences on a **fresh** interpreter, then the next model. Model
+order is reshuffled between passes so that any effect drifting over the run is
+not absorbed into the per-model result. The JSON alongside also keeps the full
+K x N matrix and per-position statistics.
 
 ---
 
 ## `coldstart_axis1.csv`, `coldstart_synth.csv` — raw first-inference series
 
-Produced by `multi_tpu/bench/bench_coldstart_{pcie,usb}.py`. Long format, one row
-per measurement:
+Written by `multi_tpu/bench/bench_coldstart_{pcie,usb}.py`, in long format:
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
 | `pass` | pass index |
 | `tag` | model |
-| `position` | 1 = cold, 2..N = the warm-up climb |
-| `lat_ms` | latency |
-| `timestamp` | when it was taken |
+| `position` | 1 is the first inference, 2 to N follow it |
+| `lat_ms` | measured latency |
+| `timestamp` | when the measurement was taken |
 
-Raw rather than summarised, because the fit that extracts `k`, `c` and the
-overlap term needs the individual points.
-
-**Fitting note.** A one-variable fit `d = c + k·I` returns a **negative**
-intercept (−1.29 ± 0.36), which is physically impossible. The missing term is
-overlap: the residual correlates at −0.66 with the operation count. The
-two-variable form `d = c + k·I − β·C` gives `k = 2.668 ± 0.072`,
-`β = 0.580 ± 0.064` and an intercept indistinguishable from zero, R² = 0.924.
-
-Confirmed on a second corpus: the 241 single-TPU-axis models that fit in SRAM
-give `β = 0.631 ± 0.040`, within 0.7 σ, and `k = 2.800 ± 0.006`, R² = 0.9995.
-Overlap is a property of the platform, not of the corpus.
+Raw rather than summarised, so any aggregation can be done downstream.
 
 ---
 
-## `N1_baseline.csv`, `pipeline_canonical.csv`, `pipeline_spread.csv` — pipelining
+## `N1_baseline.csv`, `pipeline_canonical.csv`, `pipeline_spread.csv`
 
-Produced by `multi_tpu/bench/bench_pipeline.py`, phases A, B and C. One schema:
+Written by `multi_tpu/bench/bench_pipeline.py`, phases A, B and C, sharing one
+schema:
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
 | `tag` | model |
-| `N` | pipeline stages (accelerators) |
+| `N` | number of pipeline stages, hence accelerators |
 | `perm` | TPU order, comma-separated |
-| `kind` | `baseline` (N=1), `canonical` (order 0..N−1), `random` |
+| `kind` | `baseline` at N=1, `canonical` for order 0..N-1, `random` otherwise |
 | `perm_idx` | permutation index within phase C |
 | `throughput_fps` | inferences per second |
 | `lat_ms_{mean,std,median,p95,p99,min,max}` | latency |
 | `cold_first_lat_ms` | first inference of the series |
 | `warmup`, `reps` | measurement parameters |
 
-**The latency columns of these files are not trustworthy; the throughput columns
-are.** pycoral's `PipelinedModelRunner` inflates per-item latency badly (50 ms to
-17 s for models whose real inference is under 5 ms) because it is built for
-throughput and queues work accordingly. Correct pipeline latency comes from
-`bench_latency_chained.py`, which bypasses the runner and chains the segments by
-hand.
-
-**On `perm`: the TPU ordering has no effect.** This was initially reported as an
-asymmetry and is **refuted**. Interleaving 990 fixed-order measurements with 990
-random-order ones in one session gave F = 0.905, p = 0.94 on the variances and
-p = 0.45 on the means:
-
-| | mean | σ | range |
-|---|---:|---:|---:|
-| fixed order | 112.25 fps | 1.59 % | 11.26 % |
-| random orders | 112.19 fps | 1.51 % | 12.40 % |
-
-Repeating one assignment 990 times disperses as much as using 990 different ones.
-There is no optimal assignment to search for. What the number does measure is
-**repeatability: σ ≈ 1.6 % of throughput per measurement**, so two configurations
-measured once each are only distinguishable beyond about 2 %. Repeatability
-varies between sessions (0.64 % one day, 1.55 % another), so only compare
-measurements taken in the same session.
-
-The original error is worth recording: it compared a **range** (12.45 % over 990
-draws) against a **standard deviation** (0.63 %), and estimated a within-group
-variance on 9 and 15 degrees of freedom. Never do either.
+**Use the throughput columns, not the latency ones.** These phases run through
+pycoral's `PipelinedModelRunner`, which is built for throughput and whose
+per-item timing does not represent end-to-end latency. Pipeline latency is
+measured separately by `bench_latency_chained.py`, which chains the segments
+manually.
 
 ---
 
 ## `parallel_bench.csv` — N copies on N accelerators
 
-Produced by `multi_tpu/bench/bench_parallel.py`. Long format, one row per
+Written by `multi_tpu/bench/bench_parallel.py`, in long format, one row per
 `(mode, tag, n_tpu, tpu_idx, rep)`:
 
-| Column | Meaning |
+| Column | Definition |
 |---|---|
 | `mode` | `steady` or `cold` |
 | `tag`, `n_tpu`, `tpu_idx`, `rep` | model, accelerator count, which one, repetition |
 | `latency_ms` | that inference |
-| `family`, `depth`, `base_width`, `resolution`, `num_params` | structure |
+| `family`, `depth`, `base_width`, `resolution`, `num_params` | structural metadata |
 | `tflite_size_mb`, `edgetpu_size_mb` | sizes |
-| `on_chip_mb`, `off_chip_mb` | memory regime |
+| `on_chip_mb`, `off_chip_mb` | memory split |
 | `num_ops_tpu`, `num_ops_cpu_fallback`, `num_subgraphs` | compiler output |
 
-This is the **parallel** regime: N independent copies of one model, each on its
-own accelerator and its own inference stream. Contrast with pipelining, which
-splits one model across N accelerators. Together they answer when to pipeline and
-when to parallelise: pipelining buys throughput at the cost of latency and is the
-only option when a model does not fit one accelerator; parallelism buys
-throughput more cheaply but requires each copy to fit alone.
+This measures the **parallel** regime: N independent copies of one model, each on
+its own accelerator and its own inference stream. It complements
+`bench_pipeline.py`, which splits one model across N accelerators.
 
-The derived quantity is **slowdown against the single-accelerator baseline**: 1.0
-is perfect scaling, above 1.0 is contention.
-
-At 8 accelerators, median cold slowdown is **1.60x** and median steady-state
-slowdown is **1.00x**. Contention is real while weights move and essentially
-absent once they are resident.
-
-A counter-intuitive result from the same data: cold slowdown is **inversely**
-correlated with model size. Models under 2 MB show 15-25x; models over 100 MB
-show 1.1-1.3x. The fixed per-inference overhead dominates on small models and is
-contended for, while on large models the per-device transfer dominates and scales
-cleanly.
-
-`mode` matters. In `steady`, a barrier before **each** timed repetition forces all
-accelerators to start together, making it a worst-case contention measurement;
-without the barrier the copies drift apart and stop competing. In `cold`, a fresh
-interpreter per repetition forces SRAM re-initialisation so each repetition
-genuinely pays the transfer.
+In `steady` mode a barrier before each timed repetition makes every accelerator
+start together. In `cold` mode a fresh interpreter per repetition forces SRAM
+re-initialisation.
 
 ---
 
 ## Compiler reports (JSON)
 
-`compiler_metrics.json` (axis 1) and `<basename>_compile_report.json` (axis 2)
-hold the per-segment parse of `edgetpu_compiler` output: `on_chip_used_mb`,
-`off_chip_used_mb`, `ops_edgetpu`, `ops_cpu`, `num_subgraphs`, `compile_ms`, plus
-totals.
-
-**`off_chip` is not monotonic in N.** A ResNet-101 checkpoint that fits at 6
-segments overflows by 2.02 MiB at 7 and fits again at 8. The segmentation
-heuristic balances on some other criterion and does not optimise for fitting, so
-"more segments can never be worse" is false, and a failure at N does not rule out
-N+1.
+`compiler_metrics.json` (single accelerator) and `<basename>_compile_report.json`
+(multi) hold the parsed `edgetpu_compiler` output: `on_chip_used_mb`,
+`off_chip_used_mb`, `ops_edgetpu`, `ops_cpu`, `num_subgraphs`, `compile_ms`, per
+segment, plus totals.
 
 ---
 
 ## Reproducibility
 
 Seed 42 throughout, propagated to `random`, `numpy` and `torch` (CPU and CUDA),
-and re-seeded at the start of every run so a run gives the same result alone or
-inside a sweep. Calibration draws use seed 42; benchmark inputs use seed 123, and
-verification uses 123 as well, kept distinct so that quantization is never
-evaluated on the images that calibrated it.
+and re-set at the start of each run so a run behaves the same alone or inside a
+sweep. Calibration draws use seed 42; benchmark inputs and verification use seed
+123, kept distinct so quantization is never evaluated on the images that
+calibrated it.
 
-Three layers of variability are separable: bootstrap confidence intervals on
-accuracy (no retraining needed), the calibration draw (re-quantize at another
-`--calib_seed`), and training seeds (43, 44 for multi-seed runs).
+Three sources of variability can be separated: bootstrap confidence intervals on
+accuracy, the calibration draw (`--calibration_seed`), and the training seed.
 
 ---
 
 ## Testing
 
-`docs/TESTING.md` records what has been verified and what has not, and
-`docs/run_smoke.sh` re-runs the static and import checks over every script:
+`docs/run_smoke.sh` checks that every script parses, imports in its environment
+and answers `--help`. `docs/TESTING.md` describes what is covered.
 
 ```bash
-bash docs/run_smoke.sh          # 32 checks, seconds
+bash docs/run_smoke.sh
 ```
 
 ## Known pitfalls
 
-Collected in `docs/PITFALLS.md`. The four that cost the most time:
-
-1. **`tflite_runtime` 2.5 silently saturates `ai-edge-quantizer` models.** Output
-   collapses onto the zero point, every prediction lands on the same class, top-1
-   reads as chance. No exception is raised. Use `ai_edge_litert`.
-2. **`edgetpu_compiler --num_segments N` segfaults on TFLite produced through the
-   MLIR path** (`TFLiteConverter`, or `onnx2tf` 1.x). Only `onnx2tf` 2.x, whose
-   `flatbuffer_direct` backend leaves a different description in the file, works.
-   Diagnosed under gdb as an out-of-range flatbuffer vtable lookup; see
-   `synthetic/build_one.py`.
-3. **The apex driver aborts above ~1.5 GB of simultaneous mappings**, at the C
-   level, which SIGKILLs the Python process and cannot be caught. Every
-   measurement runs in a subprocess for this reason alone.
-4. **`/dev/apex_*` reverts to root ownership on reboot.** Symptom:
-   `list_edge_tpus()` sees all eight devices but `make_interpreter()` fails to
-   load the delegate. Fix: `sudo udevadm trigger --subsystem-match=apex`.
-
----
+`docs/PITFALLS.md` collects the failure modes worth knowing before running
+anything, several of which produce plausible-looking output rather than an error.
 
 ## References
 
 - Li et al., *PruningBench: A Comprehensive Benchmark of Structural Pruning*,
-  arXiv:2406.12315 (2024) — the protocol axis 1 follows.
-- Fang et al., *DepGraph: Towards Any Structural Pruning*, CVPR 2023 — the
+  arXiv:2406.12315 (2024).
+- Fang et al., *DepGraph: Towards Any Structural Pruning*, CVPR 2023, the
   Torch-Pruning library used throughout.
-- Gao, Choi and Wang, *Work-in-Progress: Modeling Inference Latency on Edge TPUs*,
-  RTSS 2025 — independent measurement of Coral USB transfer bandwidth.
-- Li et al., *Pruning Filters for Efficient ConvNets*, ICLR 2017 — the
-  fine-tuning recipe of axis 2.
+- Li et al., *Pruning Filters for Efficient ConvNets*, ICLR 2017.
 - Renda et al., *Comparing Rewinding and Fine-tuning in Neural Network Pruning*,
   ICLR 2020.
 
 ## Licence
 
-MIT for the code. The models published on the Hugging Face Hub derive from
-CIFAR-100 and ImageNet-1k and from architectures whose original licences apply.
+MIT for the code. The published models derive from CIFAR-100 and ImageNet-1k and
+from architectures whose original licences apply.

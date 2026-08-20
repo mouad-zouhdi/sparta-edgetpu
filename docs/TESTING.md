@@ -58,11 +58,10 @@ Verified on one configuration per family, plus variations in depth, width and
 resolution, plus one configuration deliberately too large, which must fail
 gracefully and leave a metadata record rather than taking the sweep down.
 
-The decisive assertion is the multi-segment compile. `--num_segments 2` and `4`
-succeed here, where a model converted through the MLIR path segfaults the
-compiler. That is the workaround this repository exists to record, and it is
-checked rather than asserted: the produced file's description field is verified
-to read `onnx2tf flatbuffer_direct`, and the compiles are actually run.
+The multi-segment compile is the assertion that matters, since it is what the
+conversion path was chosen for. It is checked rather than assumed: the produced
+file's description field is verified to read `onnx2tf flatbuffer_direct`, and the
+compiles at `--num_segments 2` and `4` are actually run.
 
 ## 4. End-to-end: axis 1, on a GPU cluster
 
@@ -88,62 +87,21 @@ to read `onnx2tf flatbuffer_direct`, and the compiles are actually run.
 
 ---
 
-## What these runs actually found
+## What the campaign found
 
-Testing is worth doing only if it can fail. This campaign found four real
-defects, three of them introduced while preparing this repository:
+The campaign found four defects, three of them introduced while preparing this
+repository for release:
 
-1. **`--work_dir` created no directories.** Rebinding the output paths without
-   creating them made every conversion fail with a missing-*file* error, which
-   reads as a model problem rather than a setup one.
-2. **The conversion script exited 0 with zero successes.** Individual failures
-   must not abort a batch, since several criterion/architecture pairs are known
-   to fail, but a run where *everything* failed looked like success to any
-   calling script. It now returns non-zero in that case.
-3. **`onnx2tf_wrapper.py` imported an entry point upstream had renamed**, and ran
-   the CLI at import time rather than on execution.
-4. **A stale module name** in a benchmark import, left over from a rename.
+1. A `--work_dir` option that rebound the output paths without creating the
+   directories they pointed at, so every conversion failed.
+2. A conversion script that exited 0 with zero successes, which made a calling
+   script carry on as if it had produced models.
+3. A wrapper importing an entry point that upstream had renamed, and running the
+   command line at import rather than on execution.
+4. A stale module name in a benchmark import, left over from a rename.
 
-It also confirmed several documented behaviours against real execution rather
-than against the docstring:
-
-| Claim | Observed |
-|---|---|
-| The achieved pruning rate differs from the requested one | 30.0-30.2 % across ten criteria at a 30 % target; 10.1 / 50.0 / 90.1 % at 10 / 50 / 90 % |
-| `bn_scale` skips an architecture without BatchNorm | skipped with a message, exit 0, no run recorded |
-| `obdc` fails gracefully on Fire modules | caught and logged, the sweep continued |
-| Data-driven criteria cost more | random 2 s, magnitude 5-7 s, taylor 62 s, obdc 124 s, hrank 582 s of pruning time |
-| `bn_scale` starts from the sparsity-trained checkpoint | its reference accuracy differs from the others, as it should |
-| A missing metric is null, never zero | a pruned model with no baseline in the set got empty cross-model fields |
-| Pruning can cross the SRAM boundary | ResNet-18 baseline: 7.65 MiB on-chip and 3.11 MiB streamed; the same model pruned 50 %: 6.21 MiB on-chip, nothing streamed |
-| Model-zoo loaders return the published architectures | all eight matched their parameter counts to the tenth of a million |
-| The size target implies the rate | ResNet-50 at 8 MB resolved to 68.7 %, against the 69 % on record |
-
-### The pipeline reproduces its own central claim
-
-The most useful thing the end-to-end run produced was not a pass mark. Compiling
-the ten pruned models, all at the same achieved rate of 30.0 to 30.2 %, gives:
-
-| Criterion | Off-chip streamed (MiB) |
-|---|---:|
-| lamp | 0.07 |
-| hrank | 0.13 |
-| fpgm | 0.34 |
-| taylor | 0.47 |
-| magnitude_l2 | 0.50 |
-| magnitude_l1 | 0.51 |
-| random | 0.54 |
-| bn_scale | 0.56 |
-| fisher | 0.72 |
-| obdc | 0.91 |
-
-A **12.4x spread in streamed volume at identical parameter reduction**, from
-models given two fine-tuning epochs on a five-epoch baseline. Streamed weights
-are re-transferred on every inference, at roughly 3.3 ms/MiB over USB, so that
-spread is latency the parameter count does not predict.
-
-This is the claim the whole study rests on, produced by the released code in a
-test run rather than asserted in prose.
+All four are fixed. The point of recording them is that a test suite which never
+fails is not evidence of anything.
 
 ## What is NOT covered
 
