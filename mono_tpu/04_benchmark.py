@@ -91,8 +91,8 @@ USAGE
 
     # Raspberry Pi, deployed layout
     python 04_benchmark.py \\
-        --platform_dir /home/raspberrypi/data \\
-        --results_dir /home/raspberrypi/results \\
+        --platform_dir /path/to/deployed/data \\
+        --results_dir /path/to/results \\
         --device tpu --warmup 30 --runs 200 --num_images 0
 
     --num_images 0 means the full 10k test set. Models, compiler metrics and the

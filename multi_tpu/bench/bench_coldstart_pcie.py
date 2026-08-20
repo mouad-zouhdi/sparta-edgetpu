@@ -43,14 +43,16 @@ USAGE
     bench_coldstart_pcie.py --pass-idx K [--positions 10] [--tpu 0]
 """
 from __future__ import annotations
-import argparse, csv, random, sys, time
+import argparse, csv, os, random, sys, time
 from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/home/mzouhdi/Bureau/multi_tpu_benchmark_pipeline")
-MODEL_DIR = ROOT / "axis1_edgetpu"
-OUT = ROOT / "outputs" / "bench_full" / "coldstart_axis1.csv"
+# Working directory on the 8x Edge TPU host. Override with BENCH_ROOT rather than
+# editing this line; MODEL_DIR must hold the compiled *_edgetpu.tflite binaries.
+ROOT = Path(os.environ.get("BENCH_ROOT", Path(__file__).resolve().parent.parent.parent))
+MODEL_DIR = Path(os.environ.get("BENCH_MODEL_DIR", ROOT / "axis1_edgetpu"))
+OUT = Path(os.environ.get("BENCH_OUT", ROOT / "outputs" / "bench_full" / "coldstart_axis1.csv"))
 COLS = ["pass", "tag", "position", "lat_ms", "timestamp"]
 
 

@@ -69,6 +69,7 @@ NOTE
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import random
 import sys
@@ -91,7 +92,13 @@ from bench_utils import (  # noqa: E402
 # ============================================================
 # Defaults (tweakable via CLI)
 # ============================================================
-DEFAULT_ROOT = Path("/home/mzouhdi/Bureau/multi_tpu_benchmark_pipeline")
+# Root of the benchmark working directory on the 8x Edge TPU host: it holds the
+# compiled models, their compile reports and the output CSVs. Override with
+# BENCH_ROOT rather than editing this line, or pass the individual --*-root
+# options. The default is this script's grandparent, which is correct when the
+# repository itself is the working directory.
+DEFAULT_ROOT = Path(os.environ.get(
+    "BENCH_ROOT", Path(__file__).resolve().parent.parent.parent))
 DEFAULT_MODELS_ROOT = DEFAULT_ROOT / "outputs_pipeline"
 DEFAULT_REPORTS_DIR = DEFAULT_MODELS_ROOT / "reports"
 DEFAULT_METADATA_ROOT = DEFAULT_ROOT / "metadata"   # rsynced from a131

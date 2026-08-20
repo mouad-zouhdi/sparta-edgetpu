@@ -21,7 +21,7 @@ Improvements over v1 (see build_one_v2.py for the per-config pipeline):
     - anything else                       → retry
 
 Usage:
-  cd /home/mzouhdi/Bureau/generate_models
+  cd synthetic/
   ./miniforge/envs/gen/bin/python -u regen_sweep_v2.py \\
       --workers 2 --num_calib 100 --timeout 1800 \\
       --max_params 80000000 --min_disk_gb 30 --skip-existing

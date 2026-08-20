@@ -50,8 +50,8 @@ HOW THE MEASUREMENT IS STRUCTURED, AND WHY
 
 USAGE
     python 05_benchmark_coldstart.py \\
-        --platform_dir /home/raspberrypi/data \\
-        --results_dir /home/raspberrypi/results \\
+        --platform_dir /path/to/deployed/data \\
+        --results_dir /path/to/results \\
         --device both --passes 30 --inferences_per_pass 10
 """
 

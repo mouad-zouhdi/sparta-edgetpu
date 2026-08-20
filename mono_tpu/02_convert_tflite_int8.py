@@ -76,12 +76,32 @@ import cifar_vgg  # noqa: F401
 import wrn  # noqa: F401
 
 
+# Working directory: holds models/ and pytorch_pruned/ as inputs, and receives
+# onnx_models/, tflite_float32/ and tflite_int8/. Defaults to this script's own
+# directory, which is the layout every published result was produced with;
+# --work_dir (resolved in main) relocates the whole set together.
 BASE_DIR = Path(__file__).parent
 MODELS_DIR = BASE_DIR / "models"
 PRUNED_DIR = BASE_DIR / "pytorch_pruned"
 ONNX_DIR = BASE_DIR / "onnx_models"
 FLOAT_DIR = BASE_DIR / "tflite_float32"
 INT8_DIR = BASE_DIR / "tflite_int8"
+
+
+def _set_work_dir(root: Path) -> None:
+    """Repoint every derived directory at `root`.
+
+    Rebinds the module-level globals rather than threading a path through every
+    function, which keeps the change additive: callers that never pass
+    --work_dir see exactly the previous behaviour.
+    """
+    global BASE_DIR, MODELS_DIR, PRUNED_DIR, ONNX_DIR, FLOAT_DIR, INT8_DIR
+    BASE_DIR = root
+    MODELS_DIR = root / "models"
+    PRUNED_DIR = root / "pytorch_pruned"
+    ONNX_DIR = root / "onnx_models"
+    FLOAT_DIR = root / "tflite_float32"
+    INT8_DIR = root / "tflite_int8"
 
 for d in [ONNX_DIR, FLOAT_DIR, INT8_DIR]:
     d.mkdir(parents=True, exist_ok=True)
@@ -495,22 +515,33 @@ def discover_models(args):
 
 def main():
     """Parse arguments, discover the models to convert, and convert each in turn."""
-    parser = argparse.ArgumentParser(description="SPARTA — PyTorch → TFLite int8 (CIFAR-100)")
+    parser = argparse.ArgumentParser(
+        description="Convert CIFAR-100 models from PyTorch to INT8 TFLite")
     parser.add_argument("--data_dir", type=str, required=True,
-                        help="Dossier contenant le sous-dossier `cifar-100-python/` "
-                             "(format pickle binaire d'origine de Krizhevsky)")
+                        help="Directory containing the `cifar-100-python/` subfolder "
+                             "(Krizhevsky's original binary pickle format)")
     parser.add_argument("--num_calib", type=int, required=True)
     parser.add_argument("--models", nargs="+", default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--calibration_seed", type=int, default=42,
-                        help="Seed for drawing the calibration sample "
-                             "(varie pour mesurer la variance PTQ). seed=42 garde "
-                             "l'ancien nom de fichier ; autres seeds ajoutent _cseed{N}.")
+                        help="Seed for drawing the calibration sample. Vary it and re-run to "
+                             "measure how sensitive the INT8 result is to the calibration "
+                             "draw. seed=42 keeps the plain filename; any other seed "
+                             "appends _cseed{N}.")
+    parser.add_argument("--work_dir", type=str, default=None,
+                        help="Directory holding models/ and pytorch_pruned/, and "
+                             "receiving onnx_models/, tflite_float32/ and tflite_int8/. "
+                             "Defaults to this script's own directory, which is the "
+                             "layout the published runs used.")
     args = parser.parse_args()
 
+    if args.work_dir:
+        _set_work_dir(Path(args.work_dir))
+
     print("=" * 60)
-    print("SPARTA — CONVERSION PYTORCH → TFLITE INT8 (CIFAR-100)")
-    print("  Pipeline : ONNX → onnx2tf (NHWC) → ai-edge-quantizer")
+    print("PYTORCH -> INT8 TFLITE CONVERSION (CIFAR-100)")
+    print("  Pipeline : ONNX -> onnx2tf (NHWC) -> ai-edge-quantizer")
+    print(f"  Work dir : {BASE_DIR}")
     print(f"  Data dir : {args.data_dir}")
     print(f"  Calib    : {args.num_calib} images (seed={args.calibration_seed})")
     print("=" * 60)

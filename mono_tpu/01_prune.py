@@ -1266,9 +1266,18 @@ def main():
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--force", action="store_true",
                         help="Recompute even when the output file already exists")
+    parser.add_argument("--work_dir", type=str, default=None,
+                        help="Directory holding models/ and receiving pytorch_pruned/ "
+                             "and pruning_logs/. Defaults to this script's own "
+                             "directory, which is what the published runs used. Set it "
+                             "to keep several gigabytes of checkpoints out of a clone "
+                             "of this repository.")
     args = parser.parse_args()
 
-    BASE_DIR = Path(__file__).parent
+    # Default to the script's directory, preserving the layout every published
+    # result was produced with; --work_dir relocates the whole set together, so
+    # inputs and outputs never end up split across two trees.
+    BASE_DIR = Path(args.work_dir) if args.work_dir else Path(__file__).parent
     MODELS_DIR = BASE_DIR / "models"
     PRUNED_DIR = BASE_DIR / "pytorch_pruned"
     LOG_DIR = BASE_DIR / "pruning_logs"
@@ -1284,7 +1293,7 @@ def main():
     available = [f.stem for f in sorted(MODELS_DIR.glob("*.pt"))]
     if not available:
         print(f"\n[ERROR] No baseline found in {MODELS_DIR}/ "
-              f"(lance prepare/prepare_models.py d'abord)")
+              f"(run 00_prepare_baselines.py first, or pass --work_dir)")
         return
 
     model_list = args.models if args.models else available

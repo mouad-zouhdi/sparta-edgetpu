@@ -511,6 +511,15 @@ accuracy (no retraining needed), the calibration draw (re-quantize at another
 
 ---
 
+## Testing
+
+`docs/TESTING.md` records what has been verified and what has not, and
+`docs/run_smoke.sh` re-runs the static and import checks over every script:
+
+```bash
+bash docs/run_smoke.sh          # 32 checks, seconds
+```
+
 ## Known pitfalls
 
 Collected in `docs/PITFALLS.md`. The four that cost the most time:
