@@ -409,6 +409,18 @@ sweep. Calibration draws use seed 42; benchmark inputs and verification use seed
 123, kept distinct so quantization is never evaluated on the images that
 calibrated it.
 
+**What the seed does and does not guarantee.** Pruning is bit-reproducible: two
+runs of the same triple at the same seed select the same channels and reach the
+same parameter reduction to the last digit. Fine-tuning is not: two such runs
+were measured at 24.55 % and 24.20 % top-1. The difference comes from GPU
+kernel non-determinism, which the seed does not control. Set
+`torch.use_deterministic_algorithms(True)` and `CUBLAS_WORKSPACE_CONFIG` if you
+need the training reproducible too, at some cost in speed.
+
+So a reported accuracy carries a run-to-run spread of a few tenths of a point,
+independently of the evaluation noise the bootstrap intervals describe. Treat
+differences smaller than that as unresolved.
+
 Three sources of variability can be separated: bootstrap confidence intervals on
 accuracy, the calibration draw (`--calibration_seed`), and the training seed.
 

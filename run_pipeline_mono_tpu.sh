@@ -167,6 +167,9 @@ if [[ $SMOKE -eq 1 ]]; then
     NUM_CALIB=16; BENCH_WARMUP=2; BENCH_RUNS=5; BENCH_IMAGES=100
     COLD_PASSES=2; COLD_INFERENCES=4
     echo "### SMOKE MODE: one model, one criterion, minimal epochs ###"
+    echo "### Judge it on whether the stages run, never on the numbers.  ###"
+    echo "### A baseline this short has learned nothing, so the pruning  ###"
+    echo "### rates and accuracies it yields are meaningless.            ###"
 fi
 
 # Should this stage run, given --from and --only?

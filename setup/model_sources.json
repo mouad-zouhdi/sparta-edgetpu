@@ -50,7 +50,7 @@
       "dest": "axis1_cifar100/logs"
     },
     "axis2 pruned (pytorch)": {
-      "_comment": "Post-fine-tuning models, plus the PREFT checkpoints that WON their guided loop and were the direct input to that fine-tuning. The 32 PREFT files from REJECTED loop iterations are excluded: they were internal probes of the loop, never benchmarked. The numbers from every iteration, winners and losers alike, are preserved in the pipeline_summary.json files, so the fixed-overhead regression remains reproducible without the binaries.",
+      "_comment": "Post-fine-tuning models from BOTH campaigns: the wave, which covered every architecture at a few size targets, and the N=1..8 sweep, which covered three architectures at every rate. Plus the PREFT checkpoints that won their guided loop. The PREFT files from rejected iterations are excluded: they were internal probes of the loop, never benchmarked.",
       "patterns": [
         "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/*_taylor.pt",
         "/home/a131/Desktop/Project/multi_tpu/models/pytorch_pruned_imagenet/*_magnitude_l2.pt",
@@ -182,6 +182,20 @@
         "/home/a131/Desktop/mesures_brut/benchmark_results.json"
       ],
       "dest": "measurements"
+    },
+    "axis2 tflite int8 (final models)": {
+      "_comment": "Quantized final models of both campaigns. Distinct from the PREFT-derived quantized files the guided loop produces, which are not published.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/tflite_int8_pruned_v2/*.tflite"
+      ],
+      "dest": "axis2_imagenet/tflite_int8"
+    },
+    "axis1 sparsity-learning caches": {
+      "_comment": "Sparsity-trained checkpoints, one per architecture that has BatchNorm. bn_scale ranks channels by BatchNorm gamma, which discriminates almost nothing on a normally trained network; these were produced by 100 epochs of L1-regularised training, about 5-6 h of GPU each, and are reused across every target of their model. Without them bn_scale cannot be reproduced without redoing that phase. The group_lasso one is the equivalent for that criterion.",
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/modelsV2/*_sparse.pt"
+      ],
+      "dest": "axis1_cifar100/sparsity_caches"
     }
   }
 }

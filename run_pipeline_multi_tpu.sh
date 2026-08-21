@@ -126,6 +126,8 @@ MAX_ITERS="${MAX_ITERS:-8}"
 MARGIN_MB="${MARGIN_MB:-0.5}"
 
 # Calibration images for quantization, drawn from the ImageNet training split.
+# Used by the fetch stage. pipeline_full.py does not expose it: it passes its own
+# default down to 02_convert_pruned.py.
 NUM_CALIB="${NUM_CALIB:-100}"
 
 # --- Benchmarking ----------------------------------------------------------
@@ -233,7 +235,7 @@ if should_run prune; then
                 --int8_dir   "$WORK_DIR/tflite_int8_pruned"
                 --edgetpu_dir "$WORK_DIR/edgetpu_compiled_pruned"
                 --log_dir    "$WORK_DIR/pruning_logs_imagenet"
-                --batch_size "$BATCH_SIZE" --num_calib "$NUM_CALIB"
+                --batch_size "$BATCH_SIZE"
                 --max_iters "$MAX_ITERS" --refine_margin_mb "$MARGIN_MB"
                 --run_tag "T${target}MB" --python "$PYTORCH_PY"
             )

@@ -202,7 +202,23 @@ are then read through indices that no longer denote the same channels, so the
 pruning becomes effectively random while still completing without error. The
 symptom is chance-level accuracy from a run that looks healthy.
 
-### 21. Use the achieved pruning rate, not the target
+### 21. A shortened baseline makes the achieved pruning rate meaningless
+
+Importance criteria rank channels of a trained network. Given one that has
+learned nothing, the ranking is degenerate and the pruning loop misbehaves in two
+opposite ways: a data-driven criterion can overshoot enormously in a single step,
+because the gradients carry no signal, while a weight-based one can exhaust its
+iterative budget without ever reaching the target, because no channel stands out.
+
+Measured on a deliberately shortened run, the deviation tracks baseline accuracy
+exactly: an architecture at 38-43 % top-1 reached 30.02-30.16 % for a 30 % target,
+while one left at chance level reached anywhere from 13.8 % to 76.9 %.
+
+This is not a defect, and there is nothing to fix. It matters because a short
+smoke run will show it, and it looks like a broken pruner. Judge a smoke run on
+whether the stages execute, never on the numbers they produce.
+
+### 22. Use the achieved pruning rate, not the target
 
 Global pruning removes whole dependency groups of varying size, so the achieved
 rate is never exactly the requested one. Plot against `param_reduction_pct`;
@@ -212,21 +228,21 @@ plotting against `prune_pct` silently misplaces every point.
 
 ## Infrastructure
 
-### 22. Orphaned temporary directories after an OOM kill
+### 23. Orphaned temporary directories after an OOM kill
 
 `build_one.py` cleans its scratch directory in a `finally` block, which does not
 run under SIGKILL. Each orphan is around 6 GB; 27 of them filled a disk to 97 %
 within hours. `generate_sweep.py` cleans `/tmp/regen_*` at start-up and refuses
 to start a new configuration below `--min_disk_gb`.
 
-### 23. `tf2onnx` is disproportionately memory-hungry on wide, shallow models
+### 24. `tf2onnx` is disproportionately memory-hungry on wide, shallow models
 
 It OOMs on models above roughly 100 M parameters. Empirical thresholds: 80 M with
 2 workers on a 15 GB host, 100 M with 2 workers on 31 GB, 145 M with 1 worker.
 A model with few but very wide blocks OOMs where a deeper one of the same size
 does not.
 
-### 24. SLURM defaults are too small
+### 25. SLURM defaults are too small
 
 `--mem=24G` at minimum: the 2 GB default makes `onnx2tf` die with a bus error on
 resnet50 and larger. Several jobs sharing one `--job-name` queue behind each

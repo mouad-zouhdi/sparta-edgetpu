@@ -94,6 +94,18 @@ check "setup/apply_patches.py" "$P" "$R/setup/apply_patches.py" no
 for f in stage_models.py fetch_models.py upload_models_hf.py; do
   check "setup/$f" "$P" "$R/setup/$f" yes; done
 
+echo "=== runner options ==="
+# The runners drive the pipeline scripts through their command lines, so an
+# option that does not exist fails only when that stage is reached. Ask each
+# script what it accepts rather than grepping for the name.
+if "$P" "$R/docs/check_runner_options.py" --python "$P" >/tmp/_optchk.txt 2>&1; then
+  echo "  ok           runner options ($(grep -c '^  ok' /tmp/_optchk.txt) scripts)"; ((pass++))
+else
+  echo "  OPTIONS FAIL runner passes options that do not exist:"
+  grep -E '^\s+--' /tmp/_optchk.txt | sed 's/^/    /'
+  FAILED+=("runner-options"); ((fail++))
+fi
+
 echo
 echo "==================================================="
 echo "  PASS: $pass    FAIL: $fail"
