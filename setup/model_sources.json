@@ -196,6 +196,20 @@
         "/home/a131/Desktop/Project/data/models/modelsV2/*_sparse.pt"
       ],
       "dest": "axis1_cifar100/sparsity_caches"
+    },
+    "axis2 measurements (partition grid)": {
+      "_comment": "Edge TPU measurements of the 23 sweep checkpoints across all 22 ways of splitting eight accelerators between instances, plus the accuracy and segment metadata needed to join against them. The earlier grid (scaling_sweepN, hybrid_sweepN) is kept alongside: it covers the non-saturating shapes the partition grid does not.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_sweepN.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_sweepN_par_config.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_sweepN_par_instance.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/accuracy_sweepN_5000.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/segment_metadata_sweepN.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/scaling_sweepN.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/hybrid_sweepN.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/hetero_sweepN.csv"
+      ],
+      "dest": "axis2_imagenet/measurements"
     }
   }
 }

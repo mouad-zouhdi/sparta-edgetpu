@@ -68,6 +68,12 @@ SETS: dict[str, tuple[str, list[str]]] = {
         "checkpoints that won their guided loop.",
         ["axis2_imagenet/pruned_pytorch/*"],
     ),
+    "axis2-measurements": (
+        "5.8 MiB, 9 files. Edge TPU measurements of 23 axis-2 checkpoints across "
+        "all 22 ways of splitting eight accelerators between instances, with a "
+        "README describing the protocol and every column.",
+        ["axis2_imagenet/measurements/*"],
+    ),
     "axis2-logs": (
         "4 MiB, 392 files. Training logs, pipeline summaries with every guided "
         "loop iteration, and compiler reports.",

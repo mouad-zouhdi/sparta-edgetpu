@@ -69,6 +69,7 @@ GPU-hours.
 | `axis2_imagenet/pruned_pytorch/` | 38 | 1.15 GiB | final models, plus the checkpoints that won their loop |
 | `axis2_imagenet/edgetpu/` | 1548 | 8.00 GiB | compiled segments, 1 to 8 per model |
 | `axis2_imagenet/logs/` | 392 | 4 MiB | training logs, pipeline summaries, compiler reports |
+| `axis2_imagenet/measurements/` | 9 | 5.8 MiB | Edge TPU measurements of these models on eight accelerators, with their own README |
 | `synthetic/tflite_int8/` | 307 | 8.01 GiB | synthetic corpus, quantized |
 | `synthetic/edgetpu/` | 656 | 2.16 GiB | compiled, N = 1 to 8 |
 | `synthetic/metadata/` | 416 | 2 MiB | structural metadata, successes and failures alike |
@@ -98,6 +99,12 @@ Eight ImageNet architectures pruned from their published weights to a size
 target, then compiled across 1 to 8 segments so that several accelerators share
 the model. The `*_pipeline_summary.json` files record each iteration of the loop
 that determined how much pruning was needed.
+
+`measurements/` holds the Edge TPU measurements of 23 of these checkpoints across
+all 22 ways of splitting eight accelerators between instances, from a single
+eight-stage pipeline to eight independent copies. Its own README describes the
+protocol, every column, and the three ways the files are easy to read wrongly.
+The join key against the models is `(model, pct)`.
 
 ### synthetic
 
