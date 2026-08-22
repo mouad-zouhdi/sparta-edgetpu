@@ -29,9 +29,14 @@
 #      the MLIR backend and yields models that make edgetpu_compiler segfault
 #      under segmentation; that failure would only surface hours later).
 #   2. Create the venv, upgrade pip, install the matching requirements file.
-#   3. For pytorch-env only, run setup/apply_patches.py, which rewrites two
+#   3. Install the handful of packages that must bypass the resolver, with
+#      --no-deps. These are listed at the bottom of each requirements file with
+#      the reason: their declared pins contradict versions this project is known
+#      to run on, and honouring them makes the file unsatisfiable or silently
+#      replaces a package with a different build of the same module.
+#   4. For pytorch-env only, run setup/apply_patches.py, which rewrites two
 #      upstream source files in place (see that script for the rationale).
-#   4. Verify each env by importing its critical modules.
+#   5. Verify each env by importing its critical modules.
 #
 # USAGE
 #   ./setup/setup_envs.sh                      # all three envs
@@ -41,13 +46,19 @@
 #
 # NOTE ON THE EDGE TPU COMPILER
 #   edgetpu_compiler is a closed-source Google binary, x86-64 Linux only. It is
-#   not a Python package and cannot be pip-installed. With --edgetpu-compiler
-#   this script unpacks the .deb into $PREFIX without root, which is what the
-#   cluster jobs do; a system-wide `apt install edgetpu-compiler` works too.
+#   not a Python package and cannot be pip-installed, so --edgetpu-compiler
+#   reports whether one is already on PATH and otherwise prints the two ways of
+#   getting it: a system-wide `apt install edgetpu-compiler`, or unpacking the
+#   .deb into $PREFIX without root, which is what the cluster jobs do.
 # ===========================================================================
 set -euo pipefail
 
-PREFIX="$(pwd)/envs"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Anchored to the repository, not to the current directory: run_smoke.sh and the
+# two pipeline runners look for the environments there, so a setup launched from
+# elsewhere would otherwise put them where nothing finds them.
+PREFIX="$REPO_ROOT/envs"
 WANT_COMPILER=0
 TARGETS=()
 
@@ -57,14 +68,13 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --prefix)            PREFIX="$2"; shift 2 ;;
         --edgetpu-compiler)  WANT_COMPILER=1; shift ;;
-        -h|--help)           sed -n '2,45p' "$0"; exit 0 ;;
+        -h|--help)           awk 'NR>1 && /^#/ {print; next} NR>1 {exit}' "$0"; exit 0 ;;
         pytorch|coral|synth) TARGETS+=("$1"); shift ;;
         *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
     esac
 done
 [[ ${#TARGETS[@]} -eq 0 ]] && TARGETS=(pytorch coral synth)
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQ_DIR="$REPO_ROOT/requirements"
 mkdir -p "$PREFIX"
 
@@ -114,9 +124,20 @@ make_env() {
     echo "$name: dependencies installed"
 }
 
+# Install packages the resolver must not see. pip has no per-requirement
+# --no-deps, so these cannot live in the requirements file itself; the file
+# lists them in a comment block instead, with the reason for each.
+install_no_deps() {
+    local name="$1"; shift
+    local venv="$PREFIX/$name"
+    echo "--- installing without dependency resolution: $* ---"
+    "$venv/bin/python" -m pip install --no-deps "$@"
+}
+
 # Import-check an env. Cheap, but catches the failure mode that matters here:
 # a package that resolves at install time yet cannot load (ABI mismatch between
 # numpy and pycoral, or a CUDA build that does not match the driver).
+VERIFY_FAILURES=0
 verify_env() {
     local name="$1"; shift
     local venv="$PREFIX/$name"
@@ -126,6 +147,7 @@ verify_env() {
             echo "  ok    $mod"
         else
             echo "  FAIL  $mod"
+            VERIFY_FAILURES=$((VERIFY_FAILURES + 1))
         fi
     done
 }
@@ -133,7 +155,6 @@ verify_env() {
 # Unpack the Edge TPU compiler .deb into $PREFIX without root. Used by the
 # cluster jobs, which cannot apt-install anything.
 install_edgetpu_compiler() {
-    local deb_url="https://packages.cloud.google.com/apt/pool/edgetpu-compiler_16.0_amd64_e6e3a3f2c1ba09d1d6a99b4d5d7e0b5f.deb"
     local target="$PREFIX/edgetpu"
     echo
     echo "=============================================================="
@@ -167,6 +188,7 @@ for t in "${TARGETS[@]}"; do
     case "$t" in
         pytorch)
             make_env pytorch-env 3.12 "$REQ_DIR/pytorch-env.txt"
+            install_no_deps pytorch-env onnx2tf==2.4.0 tf_keras==2.21.0
             # onnx2tf and ai-edge-quantizer both need a source patch before they
             # emit Edge TPU-compatible models. Without it, googlenet and
             # squeezenet are rejected outright by the compiler.
@@ -181,6 +203,7 @@ for t in "${TARGETS[@]}"; do
             ;;
         synth)
             make_env synth-env 3.12 "$REQ_DIR/synth-env.txt"
+            install_no_deps synth-env tf-keras==2.21.0
             verify_env synth-env tensorflow tf2onnx onnx2tf ai_edge_quantizer
             ;;
     esac
@@ -202,3 +225,10 @@ freshly rebooted host, the /dev/apex_* nodes may come back owned by root:
   sudo udevadm trigger --subsystem-match=apex
 ==============================================================
 EOF
+
+# Exit non-zero when a module failed to import, so that a broken env is caught
+# here rather than hours later in a job. The messages above say which one.
+if [[ $VERIFY_FAILURES -gt 0 ]]; then
+    echo "$VERIFY_FAILURES module(s) failed to import; see the FAIL lines above." >&2
+    exit 1
+fi

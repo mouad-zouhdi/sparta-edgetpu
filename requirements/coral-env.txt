@@ -12,6 +12,11 @@
 # accepts load_delegate("libedgetpu.so.1"). See docs/PITFALLS.md.
 # ---------------------------------------------------------------------------
 
+# pycoral is NOT on PyPI: it is published from Google's own package index, and
+# the name `pycoral` on PyPI belongs to an unrelated project that stops at
+# 0.2.0. Without this line the install fails outright on the first requirement.
+--extra-index-url https://google-coral.github.io/py-repo/
+
 pycoral==2.0.0              # Edge TPU delegate, PipelinedModelRunner
 tflite-runtime==2.5.0.post1 # pulled in by pycoral; see warning above
 ai-edge-litert==2.1.0       # the interpreter actually used for inference

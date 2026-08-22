@@ -14,14 +14,24 @@
 # downgrade fails immediately instead of hours later at compile time.
 # ---------------------------------------------------------------------------
 
-tensorflow-cpu>=2.18
-tf-keras
+tensorflow-cpu==2.21.0
 tf2onnx
 onnx
 onnxsim
 onnx-graphsurgeon
 sng4onnx
-onnx2tf>=2.4                # flatbuffer_direct backend; 1.x will NOT work
+onnx2tf==2.6.8              # flatbuffer_direct backend; 1.x will NOT work.
+                            # Pinned rather than >=2.4: an open bound drifts to
+                            # whatever is current, and the backend is the one
+                            # thing this env exists for. 2.4.0, 2.5.0 and 2.6.8
+                            # have each been checked to emit the right
+                            # description field and to segment cleanly.
+
+# NOT resolved here, installed with --no-deps by setup/setup_envs.sh:
+#   tf-keras   requires the stable `tensorflow` distribution, which installs
+#              into the same site-packages/tensorflow/ as tensorflow-cpu above
+#              and overwrites it. The env then silently runs the CUDA-linked
+#              build this file exists to avoid.
 ai_edge_quantizer
 ai_edge_litert
 psutil

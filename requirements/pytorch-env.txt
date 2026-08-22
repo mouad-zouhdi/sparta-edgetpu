@@ -20,12 +20,24 @@ pretrainedmodels==0.7.4     # BN-Inception (Inception V2) only
 # --- PyTorch -> ONNX -> TFLite float32 ------------------------------------
 onnx==1.21.0
 onnxsim==0.6.2
+onnxruntime==1.29.0         # onnxsim shells out to `pip install onnxruntime` on
+                            # import if it is missing, which fails on an offline
+                            # compute node. Installed up front so it never runs.
 onnx-graphsurgeon
 sng4onnx==2.0.1
-onnx2tf==2.4.0              # NCHW -> NHWC; needs setup/apply_patches.py
 tf2onnx==1.17.0             # Keras -> ONNX, synthetic generator only
-tf_keras==2.21.0
-ai_edge_tensorflow==2.21.0.dev20251110
+ai_edge_tensorflow==2.21.0.dev20251110   # ships the `tensorflow` module itself
+
+# NOT resolved here, installed with --no-deps by setup/setup_envs.sh:
+#   onnx2tf==2.4.0     pins numpy==1.26.4 and onnx==1.20.1, which contradicts
+#                      the numpy 2 / onnx 1.21 this project runs on. Those pins
+#                      are upper-bound noise from its own CI, not real limits:
+#                      the conversion was validated against numpy 2.4.3 and
+#                      onnx 1.21.0. Letting pip resolve them makes the whole
+#                      file unsatisfiable.
+#   tf_keras==2.21.0   requires the stable `tensorflow` distribution, which
+#                      would land in the same site-packages/tensorflow/ as
+#                      ai_edge_tensorflow above and silently overwrite it.
 
 # --- TFLite float32 -> int8 (post-training quantization) ------------------
 ai-edge-quantizer==0.4.2    # needs setup/apply_patches.py
