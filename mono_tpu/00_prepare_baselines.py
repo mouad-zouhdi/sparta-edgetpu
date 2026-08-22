@@ -457,7 +457,7 @@ def main():
     print("TRAINING CIFAR-100 BASELINES (PruningBench recipe)")
     print(f"  Device       : {device}")
     if device.type == "cuda":
-        print(f"  GPU          : {torch.cuda.get_device_name(0)}")
+        print(f"  GPU          : {torch.cuda.get_device_name(device)}")
     print(f"  Output dir   : {output_dir.resolve()}")
     print(f"  Data dir     : {Path(args.data_dir).resolve()}")
     print(f"  Models       : {model_list}")

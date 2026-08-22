@@ -928,7 +928,7 @@ def main():
     print("=" * 72)
     print(f"  Device     : {device}")
     if device.type == "cuda":
-        print(f"  GPU        : {torch.cuda.get_device_name(0)}")
+        print(f"  GPU        : {torch.cuda.get_device_name(device)}")
     print(f"  Data dir   : {args.data_dir}")
     print(f"  Model      : {args.model}")
     print(f"  Target     : {args.target_mb} MB (about {args.target_mb}M params at 1 byte each)")

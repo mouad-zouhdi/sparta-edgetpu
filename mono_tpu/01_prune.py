@@ -1309,7 +1309,7 @@ def main():
     print("=" * 70)
     print(f"  Device       : {device}")
     if device.type == "cuda":
-        print(f"  GPU          : {torch.cuda.get_device_name(0)}")
+        print(f"  GPU          : {torch.cuda.get_device_name(device)}")
     print(f"  Data dir     : {args.data_dir}")
     print(f"  Classes      : {args.num_classes}")
     print(f"  Models       : {model_list}")

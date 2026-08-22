@@ -74,6 +74,35 @@ sudo apt install python3.9-venv python3.12-venv
 Either version can also come from conda (`conda create -n py39 python=3.9`); the
 script only needs to find `python3.9` and `python3.12` on `PATH`.
 
+### Hardware
+
+Neither accelerator is needed to install the environments or to run `--smoke`.
+Which stage needs what is in the pipeline tables below; in short, a GPU for
+training and pruning, `edgetpu_compiler` to compile, a Coral device only to
+measure. The GPU is a matter of time and not of correctness: every stage runs on
+CPU and produces the same artefacts, but a CIFAR-100 baseline is 200 epochs and
+each recovery 100 more, and the ImageNet axis costs 0.27 to 0.50 GPU-hour per
+epoch. Conversion, compilation and generation are CPU-only by construction.
+
+### If the machine has one or more GPUs
+
+No modification to any script. Each one resolves its own device, `cuda` when
+available and `cpu` otherwise, `--device` overrides, and fp16 is enabled on the
+ImageNet fine-tuning whenever the device is CUDA (`--no_amp` disables it).
+
+A second GPU does not make one run faster: there is no `DataParallel` and no
+`DistributedDataParallel`, so one process uses one device. The workload is a
+sweep of independent runs, scheduled one per GPU through a SLURM array. To use
+several, run several jobs at once:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 MODELS=resnet18 ./run_pipeline_mono_tpu.sh &
+CUDA_VISIBLE_DEVICES=1 MODELS=vgg19    ./run_pipeline_mono_tpu.sh &
+```
+
+On the ImageNet axis a batch of 128 at 224 px needs around 10 GB of VRAM;
+`--batch_size 64` on a smaller card.
+
 ### Creating the environments
 
 ```bash
@@ -180,15 +209,15 @@ The protocol follows **PruningBench** (Li et al. 2024, arXiv:2406.12315): one
 uniform recipe for every architecture, so results stay comparable with that
 leaderboard.
 
-| Stage | Script | Environment |
-|---|---|---|
-| 00 | `00_prepare_baselines.py` | pytorch-env |
-| 01 | `01_prune.py` | pytorch-env |
-| — | `aggregate_pruning_logs.py` | pytorch-env |
-| 02 | `02_convert_tflite_int8.py` | pytorch-env |
-| 03 | `03_compile_edgetpu.py` | coral-env |
-| 04 | `04_benchmark.py` | coral-env |
-| 05 | `05_benchmark_coldstart.py` | coral-env |
+| Stage | Script | Environment | Hardware |
+|---|---|---|---|
+| 00 | `00_prepare_baselines.py` | pytorch-env | GPU strongly advised |
+| 01 | `01_prune.py` | pytorch-env | GPU strongly advised |
+| — | `aggregate_pruning_logs.py` | pytorch-env | none |
+| 02 | `02_convert_tflite_int8.py` | pytorch-env | none, CPU by construction |
+| 03 | `03_compile_edgetpu.py` | coral-env | `edgetpu_compiler` |
+| 04 | `04_benchmark.py` | coral-env | Coral device for `--device tpu` |
+| 05 | `05_benchmark_coldstart.py` | coral-env | Coral device for `--device tpu` |
 
 Some criterion and architecture pairs do not apply: `bn_scale` needs BatchNorm,
 and `obdc` does not support depthwise convolutions or Fire modules. Those runs
@@ -213,15 +242,15 @@ how many bytes the compiler still streams off-chip, and prunes further if any
 remain, before launching the recovery fine-tuning. Every iteration is recorded in
 a pipeline summary JSON.
 
-| Stage | Script | Environment |
-|---|---|---|
-| 00 | `00_fetch_and_convert_pretrained.py` | pytorch-env |
-| — | `pipeline_full.py` (drives 01 to 03) | pytorch-env + compiler |
-| 01 | `01_prune_imagenet.py` | pytorch-env |
-| 02 | `02_convert_pruned.py` | pytorch-env |
-| 03 | `03_compile_edgetpu_segments.py` | coral-env |
-| — | `verify_tpu.py` | coral-env |
-| bench | `bench/bench_pipeline.py`, `bench_parallel.py`, `bench_coldstart_*.py`, `bench_latency_chained.py` | coral-env |
+| Stage | Script | Environment | Hardware |
+|---|---|---|---|
+| 00 | `00_fetch_and_convert_pretrained.py` | pytorch-env | none, CPU by construction |
+| — | `pipeline_full.py` (drives 01 to 03) | pytorch-env + compiler | GPU, and `edgetpu_compiler` |
+| 01 | `01_prune_imagenet.py` | pytorch-env | GPU required in practice |
+| 02 | `02_convert_pruned.py` | pytorch-env | none, CPU by construction |
+| 03 | `03_compile_edgetpu_segments.py` | coral-env | `edgetpu_compiler` |
+| — | `verify_tpu.py` | coral-env | Coral device |
+| bench | `bench/bench_pipeline.py`, `bench_parallel.py`, `bench_coldstart_*.py`, `bench_latency_chained.py` | coral-env | Coral device |
 
 ## The synthetic generator (`synthetic/`)
 
