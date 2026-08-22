@@ -7,7 +7,31 @@ an execution, which by a static check, and which are not covered at all.
 
 ---
 
-## 1. Static and import checks (34 files, seconds)
+## 1. The environment setup, from scratch
+
+The three environments are built from nothing, on a machine holding only
+`python3.9` and `python3.12`, and the result is checked against what it is
+supposed to run rather than against its own package list:
+
+| Step | Checked by |
+|---|---|
+| the three environments build and every critical module imports | `setup/setup_envs.sh`, which exits non-zero otherwise |
+| a deliberately broken environment is reported | one module removed, the script must exit non-zero |
+| every script parses, imports and answers `--help` | `docs/run_smoke.sh` |
+| the PyTorch to ONNX to INT8 TFLite chain runs | one CIFAR-100 model converted end to end |
+| `apply_patches.py` actually took effect | that model compiles to **100 % Edge TPU operators, 0 CPU fallback**; squeezenet is picked on purpose, since it is one of the two the compiler rejects when the patches are missing |
+| the synthetic path still routes around the segmentation bug | the generated flatbuffer's description reads `onnx2tf flatbuffer_direct`, and `--num_segments 1, 2, 4` all compile |
+
+The strongest of these is a comparison rather than an assertion: the INT8 model
+the rebuilt environment produces is **byte-for-byte identical** to the published
+one, and the compiler reports the same memory split and operator counts. A
+rebuilt environment that reproduces a published artefact exactly is better
+evidence than any import check.
+
+This found the environments to be unbuildable as first published, in three
+separate ways, all now fixed and recorded as pitfalls 27 to 29.
+
+## 2. Static and import checks (every script, seconds)
 
 Every script must parse, import in its target environment, and answer `--help`.
 
@@ -29,7 +53,7 @@ rather than gaps:
   interpreter. It is parsed rather than imported unless such an environment
   exists; `requirements/coral-env.txt` declares both.
 
-## 2. Unit-level checks on the parts that carry logic
+## 3. Unit-level checks on the parts that carry logic
 
 Run against real inputs, not mocks:
 
@@ -44,7 +68,7 @@ Run against real inputs, not mocks:
 | Learning-rate schedule | full-length and shortened runs, confirming milestones survive the filter |
 | Model zoo | all eight ImageNet architectures built with pretrained weights, forward pass, and a check that the classifier was not silently replaced |
 
-## 3. End-to-end: the synthetic generator
+## 4. End-to-end: the synthetic generator
 
 The full conversion chain, run on real configurations:
 
@@ -63,7 +87,7 @@ conversion path was chosen for. It is checked rather than assumed: the produced
 file's description field is verified to read `onnx2tf flatbuffer_direct`, and the
 compiles at `--num_segments 2` and `4` are actually run.
 
-## 4. End-to-end: axis 1, on a GPU cluster
+## 5. End-to-end: axis 1, on a GPU cluster
 
 `00 -> 01 -> aggregate -> 02`, at reduced epoch counts:
 
@@ -78,7 +102,7 @@ compiles at `--num_segments 2` and `4` are actually run.
   achieved rate;
 - log aggregation, then conversion of everything produced.
 
-## 5. End-to-end: axis 2, on a GPU cluster
+## 6. End-to-end: axis 2, on a GPU cluster
 
 - every model-zoo loader with real pretrained weights;
 - `--prune_only`, producing a PREFT checkpoint and its metadata sidecar;

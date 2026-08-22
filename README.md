@@ -38,7 +38,7 @@ The repository covers three bodies of work:
 
 ```
 setup/            environment creation, model download and upload
-requirements/     one pinned dependency set per environment
+requirements/     one dependency set per environment, pinned
 mono_tpu/         single-accelerator pipeline (CIFAR-100)
 multi_tpu/        multi-accelerator pipeline (ImageNet)
   bench/          pipeline, parallel and cold-start benchmarks
@@ -56,17 +56,52 @@ intend to run, or with `--help`.
 
 ## Installation
 
+### Prerequisites
+
+**Two Python versions must be on `PATH`**, and this is the only prerequisite the
+setup script cannot resolve for you: `pycoral` ships wheels for Python 3.6 to 3.9
+only, while `onnx2tf` 2.x requires 3.12. The script checks for each one and
+refuses to build an environment on the wrong interpreter, because a `pytorch-env`
+on 3.11 silently installs `onnx2tf` 1.x, whose output makes `edgetpu_compiler`
+segfault under segmentation, hours later.
+
 ```bash
-./setup/setup_envs.sh                      # creates envs/{pytorch,coral,synth}-env
-./setup/setup_envs.sh --edgetpu-compiler   # instructions for the compiler
-./setup/setup_envs.sh pytorch coral        # a subset
+# Debian / Ubuntu, if 3.9 is missing
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.9-venv python3.12-venv
 ```
 
-Three environments are required because they are mutually incompatible:
-`pycoral` ships wheels for Python 3.6 to 3.9 only, while `onnx2tf` 2.x needs
-3.12, and installing TensorFlow next to `onnx2tf` moves the pins the PyTorch
-conversion path depends on. `coral-env` deliberately contains no torch, since it
-is deployed to a Raspberry Pi.
+Either version can also come from conda (`conda create -n py39 python=3.9`); the
+script only needs to find `python3.9` and `python3.12` on `PATH`.
+
+### Creating the environments
+
+```bash
+./setup/setup_envs.sh                      # creates envs/{pytorch,coral,synth}-env
+./setup/setup_envs.sh pytorch coral        # a subset
+./setup/setup_envs.sh --prefix /opt/sparta # somewhere other than the repository
+./setup/setup_envs.sh --edgetpu-compiler   # instructions for the compiler
+```
+
+The environments are created inside the repository whatever the current
+directory, since that is where the pipeline runners and `docs/run_smoke.sh` look
+for them. Re-running is safe: an existing environment is reused and its packages
+re-resolved. The script exits non-zero if any environment fails to import what it
+needs, so a broken install is caught here rather than in a job.
+
+Then check the result, which parses, imports and `--help`s every script in the
+environment it is meant to run in:
+
+```bash
+bash docs/run_smoke.sh
+```
+
+Three environments are required because they are mutually incompatible, and
+merging them breaks results rather than failing loudly. Beyond the Python
+version split above, installing TensorFlow next to `onnx2tf` moves the pins the
+PyTorch conversion path depends on, which is why the synthetic generator gets
+its own. `coral-env` deliberately contains no torch, since it is deployed to a
+Raspberry Pi and to the 8x Edge TPU host.
 
 | Environment | Python | Used by |
 |---|---|---|
@@ -76,6 +111,23 @@ is deployed to a Raspberry Pi.
 
 `edgetpu_compiler` is a closed-source Google binary, x86-64 Linux only, and is
 not a Python package. All results here were produced with version 16.0.
+
+A Coral device additionally needs the runtime library `libedgetpu1-std`, and on
+a freshly rebooted host the `/dev/apex_*` nodes can come back owned by root:
+`sudo udevadm trigger --subsystem-match=apex`.
+
+### Two things the install prints that are expected
+
+`pip` reports a dependency conflict for `onnx2tf` and `tf-keras`, and the
+`--- installing without dependency resolution ---` step is what puts them there.
+Both declare pins that contradict versions this project is known to run on:
+`onnx2tf` pins `numpy==1.26.4` and `onnx==1.20.1` against the numpy 2 / onnx 1.21
+the conversion was validated on, and `tf-keras` pulls a second distribution that
+would overwrite the `tensorflow` module already installed. Honouring either makes
+the requirements file unsatisfiable or silently swaps a package for a different
+build of the same module. Each requirements file lists these at the bottom, with
+the reason. The conflict lines are expected; the import checks are what decides
+whether the environment is sound.
 
 ---
 

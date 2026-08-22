@@ -42,6 +42,8 @@
 # ===========================================================================
 set -uo pipefail
 
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ===========================================================================
 # CONFIGURATION — everything you are likely to change lives here.
 # ===========================================================================
@@ -57,9 +59,11 @@ WORK_DIR="${WORK_DIR:-$(pwd)/work_multi}"
 # registration and must be provided.
 DATA_DIR="${DATA_DIR:-/datasets/Imagenet_1k}"
 
-# Interpreters. The defaults assume setup/setup_envs.sh created ./envs.
-PYTORCH_PY="${PYTORCH_PY:-$(pwd)/envs/pytorch-env/bin/python}"
-CORAL_PY="${CORAL_PY:-$(pwd)/envs/coral-env/bin/python}"
+# Interpreters. The defaults are the environments setup/setup_envs.sh creates,
+# inside the repository, so this works from any current directory.
+# Set these if your environments are elsewhere.
+PYTORCH_PY="${PYTORCH_PY:-$REPO/envs/pytorch-env/bin/python}"
+CORAL_PY="${CORAL_PY:-$REPO/envs/coral-env/bin/python}"
 
 # --- What to run -----------------------------------------------------------
 
@@ -152,7 +156,6 @@ MAX_TOTAL_MAP_MB="${MAX_TOTAL_MAP_MB:-1500}"
 # END OF CONFIGURATION — the rest is plumbing.
 # ===========================================================================
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ONLY=""; DRY=0; SMOKE=0
 
 while [[ $# -gt 0 ]]; do

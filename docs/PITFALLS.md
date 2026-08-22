@@ -277,3 +277,41 @@ does not.
 `--mem=24G` at minimum: the 2 GB default makes `onnx2tf` die with a bus error on
 resnet50 and larger. Several jobs sharing one `--job-name` queue behind each
 other rather than running in parallel.
+
+---
+
+## Environment setup
+
+### 27. `pycoral` is not on PyPI, and the name there belongs to something else
+
+Installing `pycoral` from the default index either fails or, unpinned, silently
+gives an unrelated project that stops at 0.2.0. It is published from Google's own
+index, which `requirements/coral-env.txt` declares:
+
+```
+--extra-index-url https://google-coral.github.io/py-repo/
+```
+
+### 28. `onnx2tf` and `tf-keras` must bypass the resolver
+
+`onnx2tf` 2.4.0 pins `numpy==1.26.4` and `onnx==1.20.1`. Those are upper-bound
+noise from its own CI rather than real limits, and they contradict the numpy 2 /
+onnx 1.21 this project runs on, which makes `requirements/pytorch-env.txt`
+unsatisfiable as a whole. `tf-keras` requires the stable `tensorflow`
+distribution, which installs into the same `site-packages/tensorflow/` as
+`ai_edge_tensorflow` (pytorch-env) or `tensorflow-cpu` (synth-env) and overwrites
+it, so the environment ends up running a build it was written to avoid, without
+saying so.
+
+pip has no per-requirement `--no-deps`, so neither can be expressed in the
+requirements file. `setup/setup_envs.sh` installs them in a separate step and
+each requirements file lists them at the bottom with the reason. The dependency
+conflicts pip then reports are expected: the reference environment that produced
+the published results shows the same list.
+
+### 29. `onnxsim` runs `pip install` at import time
+
+`onnx_simplifier.py` shells out to `pip install onnxruntime` when the module is
+missing, so a conversion started on a compute node without network access fails
+part-way through rather than at setup. `onnxruntime` is pinned in
+`requirements/pytorch-env.txt` so that this never runs.
