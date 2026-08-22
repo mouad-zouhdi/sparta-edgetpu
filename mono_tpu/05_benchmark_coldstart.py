@@ -120,7 +120,7 @@ def resolve_paths(platform_dir, results_dir):
     results_dir = Path(results_dir)
 
     models_root = platform_dir / "models"
-    if not models_root.is_dir():
+    if not (models_root / "tflite_int8").is_dir():
         models_root = platform_dir
 
     TFLITE_DIR = models_root / "tflite_int8"
