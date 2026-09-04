@@ -43,6 +43,18 @@ anything in `generators/`. Run those only to change a figure.
 `figs/single_latency_ntpu.tex` (figure 5.10) and `figs/annexe_tables.tex` have no
 generator; they are written by hand.
 
+`generators/tables/` sits one step upstream. `make_tables.py` writes the
+per-model benchmark tables of appendix A and `make_curves.py` the curve data
+under `plots/`, both from `benchmark_results.json`; `make_baseline_speedup.py`
+and `make_quant_speedup.py` write the two summary tables that open the appendix.
+`make_annexe_tables.py` then takes their output and makes French copies of it in
+`figs/tables/`, leaving the originals alone.
+
+Two traps it handles, worth knowing if you touch it: **in maths mode the decimal
+comma must be braced**, `$74{,}37$`, or LaTeX sets "74, 37" with a space; and
+**"SqueezeNet 1.1" is not a number**, so it has to be protected before any
+comma substitution.
+
 **The generators carry absolute paths from the machine the research ran on.**
 They are published as the record of what produced each figure, not as a portable
 tool. Every input they name is published, and this is where it now lives:
