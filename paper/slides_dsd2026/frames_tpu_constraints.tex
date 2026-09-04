@@ -1,0 +1,32 @@
+% =====================================================================
+%  Frame "contraintes de l'Edge TPU".
+%  Texte reduit au minimum, complementaire de l'oral.
+%  Etait la premiere des deux frames de frames_tpu_pruning.tex.
+% =====================================================================
+
+\begin{frame}
+\frametitle{Edge TPU}
+\framesubtitle{Three constraints}
+
+\vspace{0.3cm}
+
+\begin{itemize}\setlength{\itemsep}{14pt}
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{A fixed set of operations}\\
+    {\small Conv, depthwise conv, pooling, add, concat, fully connected.
+     The graph is cut at the first unsupported one.}
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{INT8 only}\\
+    {\small Post-training quantization, 100 calibration images.}
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{8\,MB of on-chip memory}\\
+    {\small What does not fit is re-sent at \emph{every} inference,
+     $\approx 3.3$\,ms per MB.}
+\end{itemize}
+
+\vspace{0.5cm}
+\begin{center}
+{\color{blue!80!black}\textbf{The lighter the model, the lower its latency.}}
+\end{center}
+
+\end{frame}

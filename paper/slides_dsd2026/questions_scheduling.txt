@@ -1,0 +1,295 @@
+QUESTIONS PROBABLES - PARTIE ORDONNANCEMENT (DSD 2026)
+(revision : C = temps de premiere inference, granularite de la non-preemption)
+
+Format : la question telle qu'on vous la posera (anglais), la reponse a
+donner (anglais), et quand c'est utile une note en francais sur le fond ou
+sur le piege a eviter.
+
+
+=====================================================================
+A. LES TROIS PLUS PROBABLES
+=====================================================================
+
+---------------------------------------------------------------------
+Q1. "Your x-axis goes up to a utilization of 4. How can a task set with
+     utilization 4 run on a single processor?"
+---------------------------------------------------------------------
+
+REPONSE
+"The utilization on the x-axis is computed with the unpruned models. It is
+the load the system would have if every network ran at full size. Pruning
+then replaces each model by a smaller and faster version, so the utilization
+that is actually scheduled is always below one. A point at utilization 4
+means the original system was four times too heavy, and we can still make
+about 17 percent of those task sets fit on one accelerator."
+
+[FR] C'est LA question qui va tomber, parce que le graphe a l'air impossible :
+     aucun systeme ne peut avoir une utilisation de 4 sur un processeur.
+     Tout repose sur le fait que l'axe est l'utilisation AVANT elagage.
+     Si vous ne dites que ca, c'est deja suffisant. Le chiffre 17 % se lit
+     directement sur votre courbe rouge a x=4.
+
+---------------------------------------------------------------------
+Q2. "Why non-preemptive EDF? Preemptive EDF schedules strictly more."
+---------------------------------------------------------------------
+
+REPONSE
+"Because on this accelerator a preemption is very expensive. If we interrupt
+an inference to run another model, the weights of that other model have to be
+loaded into the 8 megabyte on-chip memory. We measured that load, it is the
+gap between the first and the second inference in my earlier table, and it is
+around 25 milliseconds. That is more than most of our inference times. So
+non-preemptive EDF does lose some schedulability, but it avoids paying that
+cost at every preemption."
+
+[FR] Vous avez le chiffre sur votre propre slide 4 : ResNet-18 fait 36,9 ms
+     a la premiere inference contre 11,5 ensuite, soit 25 ms d'ecart. C'est
+     exactement pour ca que vous avez dit "keep this in mind" a l'oral.
+     Renvoyez a cette slide, c'est votre meilleur argument.
+
+---------------------------------------------------------------------
+Q3. "You run four different models on one TPU that has only 8 megabytes.
+     Doesn't every job have to reload its weights?"
+---------------------------------------------------------------------
+
+REPONSE
+"It does, and that is exactly why the execution times we use in the scheduling
+experiments are the first-inference times, the ones that include the weight
+transfer. We do not assume that the model is already resident. Non-preemption
+is a separate matter: it guarantees that a single inference is never cut in
+half, which would force a second reload inside the same job."
+
+[FR] Votre encadrant confirme que ce sont bien les temps de premiere inference
+     qui ont ete utilises. C'est le choix sur : dans le pire cas, un autre
+     modele a occupe la SRAM depuis le job precedent de la tache, donc chaque
+     job demarre a froid. Parfois un job retrouvera ses poids en place et ira
+     plus vite, mais une analyse pire cas ne peut pas compter dessus.
+
+---------------------------------------------------------------------
+Q4. "Is the non-preemption at the job level or at the task level?"
+---------------------------------------------------------------------
+
+REPONSE
+"At the job level. Once an inference starts it runs to completion, and the
+scheduler only makes a decision when the processor becomes idle. There is no
+batching of several jobs of the same task."
+
+[FR] C'est la definition donnee dans le papier : "every job executes from its
+     start uninterruptedly until completion". Il n'existe pas de non-preemption
+     "au grain de la tache" en ordonnancement temps reel classique.
+
+     Et surtout : avec des echeances implicites, une tache n'a JAMAIS deux jobs
+     en attente en meme temps. Le job k doit finir avant T_i, et le job k+1
+     n'arrive qu'a partir de T_i. Donc des jobs d'une meme tache ne peuvent pas
+     s'enchainer pour amortir un seul chargement de poids : entre deux, il y a
+     au moins une periode, pendant laquelle les autres taches s'executent et
+     ecrasent la SRAM.
+
+     Les deux choix repondent a deux questions differentes, ils ne se
+     remplacent pas :
+       - temps a froid  -> combien coute UN job, en supposant le pire ?
+       - non-preemption -> ce job peut-il etre coupe, ce qui forcerait un
+                           second rechargement a l'interieur du meme job ?
+
+=====================================================================
+B. SUR LA METHODE
+=====================================================================
+
+---------------------------------------------------------------------
+Q5. "Is your schedulability test exact?"
+---------------------------------------------------------------------
+
+REPONSE
+"No, it is a sufficient test, from Jeffay and co-authors. It is a simple
+utilization-based condition and it runs in polynomial time. If it says yes,
+the task set is definitely schedulable. But some sets that it rejects would
+actually be schedulable, so our results are pessimistic: what we report is a
+lower bound on what pruning can buy."
+
+[FR] "Sufficient" veut dire : pas de faux positif, mais des faux negatifs.
+     C'est en votre faveur, insistez la-dessus : la vraie courbe rouge serait
+     au-dessus de celle que vous montrez.
+
+---------------------------------------------------------------------
+Q6. "Is your branch-and-bound optimal, or is it a heuristic?"
+---------------------------------------------------------------------
+
+REPONSE
+"It is optimal for the problem as we state it. The two cuts are safe: we only
+discard a branch when we can prove that nothing inside it can be schedulable,
+or that nothing inside it can beat the best solution we already have. So it
+visits fewer nodes than a full enumeration, but it returns the same optimum."
+
+[FR] Point important : "branch-and-bound" n'est pas une heuristique. Les deux
+     elagages sont des preuves, pas des paris. Le premier s'appuie sur le fait
+     que moins elaguer ne peut qu'allonger les temps ; le second sur le fait
+     que la meilleure precision atteignable dans la branche est deja calculee.
+
+---------------------------------------------------------------------
+Q7. "Why write a branch-and-bound instead of feeding the ILP to a solver?"
+---------------------------------------------------------------------
+
+REPONSE
+"The ILP is the formulation, the branch-and-bound is how we solve it. Our tree
+follows the structure of the problem, one level per task, and the
+schedulability condition we use can be checked incrementally, so we can test a
+partial assignment as soon as it is made. We did not benchmark it against a
+commercial solver, and that would be a fair comparison to add."
+
+[FR] Ne pretendez pas que c'est plus rapide qu'un solveur, ce n'est pas mesure
+     dans le papier. Reconnaitre la comparaison manquante est plus solide que
+     de bluffer.
+
+---------------------------------------------------------------------
+Q8. "How long does it take to solve?"
+---------------------------------------------------------------------
+
+REPONSE
+"It is a design-time decision, computed once before deployment, so solving
+time is not a real constraint. In the worst case the tree has nine to the
+power six leaves for our experiments, but the two cuts remove most of it. We
+do not report timings in the paper."
+
+[FR] 9 taux d'elagage, 6 taches, donc au pire 531 441 feuilles. C'est petit
+     pour un calcul hors ligne.
+
+---------------------------------------------------------------------
+Q9. "What exactly is the accuracy you maximize?"
+---------------------------------------------------------------------
+
+REPONSE
+"It is the sum over the tasks of the accuracy divided by the period. So a task
+that runs more often weighs more in the objective, which reflects that it
+produces more results per second. It is not a plain average of the accuracies."
+
+[FR] Nuance a connaitre : votre slide dit "maximize accuracy", quelqu'un peut
+     demander laquelle. La ponderation par 1/T est visible dans l'objectif du
+     modele que vous affichez.
+
+---------------------------------------------------------------------
+Q10. "What is the blocking factor, and why do you need it?"
+---------------------------------------------------------------------
+
+REPONSE
+"It exists because we never interrupt an inference. A job can arrive just
+after a longer and less urgent inference has started, and then it has to wait
+for that one to finish even though it is more urgent. B k is the longest such
+wait, that is the largest inference time among the tasks that have a longer
+period. It is the price of non-preemption, and it shows up as an extra term
+in the test."
+
+---------------------------------------------------------------------
+Q11. "What happens if a task set is not schedulable even with maximum
+      pruning?"
+---------------------------------------------------------------------
+
+REPONSE
+"Then we declare it unschedulable and return nothing. The algorithm starts by
+testing the assignment where every task is pruned as much as possible. If that
+one fails, no other assignment can work, since anything else is slower."
+
+
+=====================================================================
+C. SUR LES EXPERIENCES ET LES CHIFFRES
+=====================================================================
+
+---------------------------------------------------------------------
+Q12. "How do you generate the task sets?"
+---------------------------------------------------------------------
+
+REPONSE
+"With RandFixedSum, which is the standard way in our community to draw task
+utilizations that sum exactly to a target value without biasing the
+distribution. Six tasks per set, 250 sets per utilization point, periods drawn
+log-uniformly between 10 and 100 milliseconds, and each task takes one of the
+accuracy and speedup profiles we measured in the benchmark."
+
+---------------------------------------------------------------------
+Q13. "Why is the accuracy loss only 2 percent, even at utilization 4?"
+---------------------------------------------------------------------
+
+REPONSE
+"Because of the shape of the two curves from the first half of the talk.
+Accuracy stays almost flat up to about 60 percent of parameters removed, while
+the latency gain is largest right around that point, when the model starts
+fitting on chip. So the optimizer can take very large speedups in the region
+where accuracy is still cheap, and it only has to go beyond that region for
+the most loaded task sets."
+
+[FR] C'est le lien entre vos deux moities. Bonne question a recevoir, elle
+     vous permet de rappeler le message central.
+
+---------------------------------------------------------------------
+Q14. "Two percent compared to what?"
+---------------------------------------------------------------------
+
+REPONSE
+"Compared to the accuracy of the same task set with the unpruned models,
+including the task sets that were not schedulable without pruning."
+
+---------------------------------------------------------------------
+Q15. "Where do the C values come from? Are they real worst-case execution
+      times?"
+---------------------------------------------------------------------
+
+REPONSE
+"They are measured on the device. For the scheduling experiments we use the
+first-inference times, which include the weight transfer, and we take the
+worst case observed. The accelerator helps
+here: there is no cache and no branch prediction, and the sequence of
+operations is fixed at compile time, so the spread between inferences is
+small. It is a measurement-based worst case, not a formal bound."
+
+[FR] Ne dites pas "WCET" au sens analytique, ce serait attaquable. "Measured
+     worst case" est exact et honnete.
+
+---------------------------------------------------------------------
+Q16. "Your scenario is a drone, but the models are trained on CIFAR-100.
+      Is that realistic?"
+---------------------------------------------------------------------
+
+REPONSE
+"The scenario is illustrative, and we say so. The timing constraints and the
+inference times are real measurements on the accelerator, but the networks
+were trained on CIFAR-100, not on a weed dataset. What the scenario
+demonstrates is the mechanism, not an agronomic result."
+
+
+=====================================================================
+D. QUESTIONS COURTES
+=====================================================================
+
+Q17. "Is the pruning rate changed at runtime?"
+"No. One version per task is selected offline and stays fixed. There is no
+runtime overhead and no mode change to analyze."
+
+Q18. "Why sporadic tasks, and why implicit deadlines?"
+"Sporadic means we only assume a minimum time between two activations, which
+is the realistic model for event-triggered perception. Implicit deadline means
+each job must finish before the next activation can arrive. It is the standard
+setting, and the test we use is stated for it."
+
+Q19. "Why six tasks?"
+"It is a representative size for an embedded perception workload. The method
+does not depend on it."
+
+Q20. "Does this extend to multiple TPUs?"
+"Not directly, the schedulability condition we use is for a single processing
+unit. Extending the benchmark and the analysis to multi-TPU systems is our
+main line of future work."
+
+
+=====================================================================
+E. SI VOUS NE SAVEZ PAS
+=====================================================================
+
+Deux formules a avoir en tete, elles valent mieux qu'une reponse inventee :
+
+"That is outside what we measured, so I would rather not guess. Tomasz, do you
+want to take this one?"
+
+"We did not evaluate that, it is a good point and I will note it down."
+
+[FR] La partie ordonnancement est le travail de vos co-auteurs. Personne ne
+     vous en voudra de renvoyer une question tres technique vers eux ;
+     l'inverse, une reponse approximative, se voit tout de suite.

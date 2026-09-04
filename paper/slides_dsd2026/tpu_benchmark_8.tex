@@ -1,0 +1,76 @@
+%\begin{figure}[b] 
+%\begin{figure}[htb] 
+    \centering
+	\begin{tikzpicture}[xscale=0.8,yscale=0.8]
+	\begin{axis}[
+		y label style={at={(axis description cs:-0.18,0.5)},anchor=center},
+		xlabel=number of Edge TPUs,
+		ylabel=execution time (ms),
+		%xtick={0,2,4,6,8,10,12,14,16},
+		grid=major,
+		ymin=0, 
+		legend columns=1, 
+		legend style={at={(1.03,0.5)},anchor=west, 
+		/tikz/column 2/.style={
+                column sep=7pt,
+            }},
+		yticklabel={\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}},
+		]
+		\addplot[mark=o,color=blue] table [col sep=comma, y index = 1] {data/tpu_benchmark_8.csv};
+		\addlegendentry{Inception-v1}
+		\addplot[mark=*,color=green] table [col sep=comma, y index = 2] {data/tpu_benchmark_8.csv};
+		\addlegendentry{Inception-v2}
+		\addplot[mark=square,color=red] table [col sep=comma, y index = 3] {data/tpu_benchmark_8.csv};
+		\addlegendentry{Inception-v3}
+		\addplot[mark=diamond,color=orange] table [col sep=comma, y index = 4] {data/tpu_benchmark_8.csv};
+		\addlegendentry{Inception-v4}
+		\addplot[mark=triangle,color=cyan] table [col sep=comma, y index = 5] {data/tpu_benchmark_8.csv};
+		\addlegendentry{ResNet-50}
+		\addplot[mark=pentagon,color=yellow] table [col sep=comma, y index = 6] {data/tpu_benchmark_8.csv};
+		\addlegendentry{ResNet-101},
+		\addplot[mark=square*,color=brown] table [col sep=comma, y index = 7] {data/tpu_benchmark_8.csv};
+		\addlegendentry{ResNet-152}
+		\addplot[color=black, mark=star] table [col sep=comma, y index = 8] {data/tpu_benchmark_8.csv};
+		\addlegendentry[align=center]{Inception-\\Resnet-v2}
+		\end{axis}
+	\end{tikzpicture} 
+	
+%	\caption{Edge multi-TPU neural network benchmarks executed on ASUS AI Accelerator~CRL-G18U-P3D with 8 Edge TPUs.} \label{fig:tpu_bench}
+%\end{figure}
+
+
+% \begin{figure}[htb] 
+%     \centering
+% 	\begin{tikzpicture}[scale=0.67]
+% 	\begin{axis}[
+% 		xlabel=Number of Edge TPUs,
+% 		ylabel=WCET (ms),
+% 		%xtick={0,2,4,6,8,10,12,14,16},
+% 		grid=major,
+% 		ymin=0, 
+% 		legend columns=1, 
+% 		legend entries= 
+% 		{Inception-v1\cite{inception_v1_2014}, {Inception-v2\cite{inception_v2_v3_2016}},
+% 		{Inception-v3\cite{inception_v2_v3_2016}}, {Inception-v4\cite{inception_v4_inception_resnet_V2_2018}}, {ResNet-50\cite{resnetv1_50_101_152_2015}}, {ResNet-101\cite{resnetv1_50_101_152_2015}}, {ResNet-152\cite{resnetv1_50_101_152_2015}},
+% 		{Inception-ResNet-v2\cite{inception_v4_inception_resnet_V2_2018}}
+% 		},
+% 		legend style={at={(1.03,0.5)},anchor=west, 
+% 		/tikz/column 2/.style={
+%                 column sep=7pt,
+%             }},
+% 		yticklabel={\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}},
+% 		]
+% 		\addplot[mark=o,color=blue] table [col sep=comma, y index = 1] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=*,color=green] table [col sep=comma, y index = 2] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=square,color=red] table [col sep=comma, y index = 3] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=diamond,color=orange] table [col sep=comma, y index = 4] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=triangle,color=cyan] table [col sep=comma, y index = 5] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=pentagon,color=yellow] table [col sep=comma, y index = 6] {data/tpu_benchmark_8.csv};
+% 		\addplot[mark=square*,color=brown] table [col sep=comma, y index = 7] {data/tpu_benchmark_8.csv};
+% 		\addplot[color=black, mark=star] table [col sep=comma, y index = 8] {data/tpu_benchmark_8.csv};
+% % 		\addlegendentry[align=left]{Inception\\-Resnet V2}
+% 		\end{axis}
+% 	\end{tikzpicture} 
+	
+% 	\caption{Edge TPU benchmarks.} \label{fig:tpu_bench}
+% \end{figure}

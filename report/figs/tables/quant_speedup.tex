@@ -1,0 +1,19 @@
+\begin{table}[H]
+  \centering
+  \caption{Effet de la quantification sur CPU pour les modèles de référence, du flottant vers l'INT8. Les latences sont des moyennes $\pm$ 1$\sigma$ sur $N{=}200$ inférences après chauffe ; l'incertitude sur l'accélération est propagée.}
+  \label{tab:quant-speedup}
+  \centerline{%
+  \begin{tabular}{l rrrr}
+    \toprule
+    Modèle & CPU FP32 (ms) & CPU INT8 (ms) & Accél. INT8/FP32 & $\Delta$ Top-1 \\
+    \midrule
+    ResNet-18      & $117{,}66 \pm 3{,}12$  & $74{,}37 \pm 0{,}76$  & $1{,}58\times \pm 0{,}04$ & $-0{,}33$ \\
+    ResNet-50      & $306{,}36 \pm 4{,}95$  & $190{,}16 \pm 5{,}97$ & $1{,}61\times \pm 0{,}06$ & $-0{,}38$ \\
+    VGG-19         & $147{,}72 \pm 2{,}65$  & $69{,}87 \pm 3{,}48$  & $2{,}11\times \pm 0{,}11$ & $-0{,}36$ \\
+    WRN-28-10      & $703{,}22 \pm 12{,}41$ & $677{,}81 \pm 8{,}98$ & $1{,}04\times \pm 0{,}02$ & $-0{,}66$ \\
+    MobileNetV2    & $17{,}32 \pm 1{,}23$   & $9{,}67 \pm 0{,}09$   & $1{,}79\times \pm 0{,}13$ & $-2{,}48$ \\
+    GoogLeNet      & $100{,}01 \pm 2{,}55$  & $63{,}02 \pm 0{,}52$  & $1{,}59\times \pm 0{,}04$ & $-0{,}46$ \\
+    SqueezeNet 1.1 & $7{,}38 \pm 0{,}63$    & $4{,}61 \pm 0{,}15$   & $1{,}60\times \pm 0{,}15$ & $-5{,}29$ \\
+    \bottomrule
+  \end{tabular}}
+\end{table}

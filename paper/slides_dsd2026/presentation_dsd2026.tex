@@ -1,0 +1,808 @@
+\documentclass[svgnames,unknownkeysallowed]{beamer}
+\addtobeamertemplate{navigation symbols}{}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{pifont}
+\usepackage[figurename=]{caption}
+\usepackage{pgfplots}
+\usetikzlibrary{shapes.misc, positioning}
+\usetikzlibrary{automata,matrix,backgrounds,mindmap,shadows}
+\usepackage{tikz-er2}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{pgf,pgfarrows,pgfnodes,pgfautomata,pgfheaps,pgfshade,pgfplots,picture,booktabs,array,multirow,picture}
+\usepackage{tabularx}
+\usetikzlibrary{arrows,fit,shapes,calc,patterns,calc,chains,positioning,shadows}
+\usetikzlibrary{arrows,snakes,backgrounds,shapes,patterns,shadows,positioning,decorations.text,decorations.pathmorphing,matrix,calc,automata}
+\usetikzlibrary{arrows}
+\usepackage[normalem]{ulem}
+\usepackage{pgfplots}
+\usepgfplotslibrary{colorbrewer,groupplots}
+\pgfplotsset{
+compat=1.13,
+cycle list/Set1-5,
+cycle list/Set2,
+cycle list/Set3
+}
+\usepackage{microtype}%if unwanted, comment out or use option "draft"
+\usepackage{graphicx}
+\definecolor{jungle}{RGB}{41,171,135}
+
+\usepackage{pgf-pie}  
+
+\usepackage{listings}
+\DeclareCaptionFont{white}{\color{white}}
+\DeclareCaptionFormat{listing}{\colorbox{gray}{\parbox{\textwidth}{#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white}
+
+
+\usepackage{rtsched}
+
+\input{python}
+
+\input{title_dsd2026}
+
+\begin{document}
+
+\input{frames_title}
+
+\section{Edge TPU}
+
+\input{frames_edgetpu}
+
+\input{frames_systolic}
+
+\input{frames_tpu_constraints}
+
+\input{frames_tpu_perf}
+
+\input{frames_pruning}
+
+\input{frames_benchmark}
+
+
+
+\begin{frame}
+\frametitle{Periodic task scheduling}
+
+\begin{minipage}{0.25\textwidth} 	                        
+\begin{center}
+		{\small
+			\begin{tabular}{l|cccc}
+				& $C_i$     & $T_i$ & $A_i$ \\ \hline
+				\only<1>{$\tau_1$ & $0.50$ & $2.00$ & $80.00\%$  \\
+				$\tau_2$ & $0.50$ & $4.00$ & $75.00\%$\\
+				$\tau_3$ & $0.50$ & $6.00$ & $90.00\%$}\only<2>{$\tau_1$ & $1.00$ & $2.00$ & $88.00\%$  \\
+				$\tau_2$ & $1.00$ & $4.00$ & $82.00\%$\\
+				$\tau_3$ & $1.00$ & $6.00$ & $93.00\%$}\only<3>{$\tau_1$ & $1.50$ & $2.00$ & $94.00\%$  \\
+				$\tau_2$ & $1.50$ & $4.00$ & $88.00\%$\\
+				$\tau_3$ & $1.00$ & $6.00$ & $93.00\%$}
+			\end{tabular}
+		}
+	\end{center}
+	\end{minipage}          
+	\begin{minipage}{0.15\textwidth}              
+	$ $             
+	\end{minipage}
+	\begin{minipage}{0.55\textwidth}        
+		{       \small
+			Each sporadic task $\tau_i$ is characterized by:\\
+			\hspace*{0.2cm} \mbox{$C_i$ worst-case inference time}\\
+			\hspace*{0.2cm} $T_i$ minimum inter-arrival time (\emph{period}) \\
+			\hspace*{0.2cm} $A_i$ accuracy
+		}
+\end{minipage}
+
+\vspace*{0.5cm}
+
+
+	
+\begin{RTGrid}[width=.9\textwidth, height=4cm, nogrid=1, nonumbers=1,nosymbols=1]{3}{7}
+	\TaskNArrival{1}{0}{2.0}{4}
+	\TaskNArrival{2}{0}{4.0}{2}
+	\TaskNArrival{3}{0}{6.0}{2}
+	
+\only<1>{	
+	\TaskExecution[color=red!50]{1}{0}{0.5}
+	\TaskExecution[color=red!50]{1}{2}{2.5}
+	\TaskExecution[color=red!50]{1}{4}{4.5}
+	\TaskExecution[color=red!50]{1}{6}{6.5}
+	\TaskExecution[color=blue!50]{2}{0.5}{1.0}
+	\TaskExecution[color=blue!50]{2}{4.5}{5.0}
+	\TaskExecution[color=green!50]{3}{1.0}{1.5}
+}
+\only<2>{	
+	\TaskExecution[color=red!50]{1}{0}{1}
+	\TaskExecution[color=red!50]{1}{2}{3}
+	\TaskExecution[color=red!50]{1}{4}{5}
+	\TaskExecution[color=red!50]{1}{6}{6.7}
+	\TaskExecution[color=blue!50]{2}{1}{2}
+	\TaskExecution[color=blue!50]{2}{5}{6}
+	\TaskExecution[color=green!50]{3}{3}{4}
+}
+\only<3>{	
+	\TaskExecution[color=red!50]{1}{0}{1.5}
+	\TaskExecution[color=red!50]{1}{3.0}{4.0}
+	\TaskExecution[color=red!90!black]{1}{4.0}{4.5}
+	\TaskExecution[color=red!50]{1}{4.5}{6}
+	\TaskExecution[color=red!50]{1}{6}{6.7}
+	\TaskExecution[color=blue!50]{2}{1.5}{3.0}
+	%\TaskExecution[color=blue!50]{2}{5}{6}
+	%\TaskExecution[color=green!50]{3}{3.5}{4.5}
+}
+
+
+	\node at (0.8,3.2) {$\tau_1$};
+	\node at (0.8,2.0) {$\tau_2$};
+	\node at (0.8,0.8) {$\tau_3$};
+
+	\node at (1.1,0.15) {\footnotesize $0$};
+	%\node at (1.80,0.15) {\footnotesize $1$};
+	\node at (7.55,0.15) {\footnotesize $6$};
+	
+	\node at (1.1,1.4) {\footnotesize $0$};
+	%\node at (3.55,1.4) {\footnotesize $3$};
+	\node at (5.4,1.4) {\footnotesize $4$};
+	
+	
+	\node at (1.1,2.55) {\footnotesize $0$};
+	%\node at (1.80,2.55) {\footnotesize $1$};
+	\node at (3.2,2.55) {\footnotesize $2$};
+	\node at (5.4,2.55) {\footnotesize $4$};
+	\node at (7.55,2.55) {\footnotesize $6$};
+    
+   % \draw[decorate,decoration={brace,amplitude=5pt}] (3.55,-0.15) -- (0.9,-0.15) node[pos=0.5, yshift=-0.5cm] {\small $s_2{=}3$};
+%	\draw[dotted] (3.55,1.5) -- (3.55,-0.15);
+
+	\node at (2.0,-0.9) {};
+	
+	
+	\only<1>{
+	\node[text width=3cm,align=center] at (10.5,1.6) {Schedulable but low accuracy};
+	}
+	
+	\only<2>{
+		\node[text width=3cm,align=center] at (10.5,1.6) {Schedulable and good accuracy};
+	}
+	
+	\only<3>{
+		\node[text width=3cm,align=center] at (10.5,1.6) {High accuracy but not schedulable};
+	}
+	%\draw[decorate,decoration={brace,amplitude=5pt}] (4.4,-0.9) -- (0.9,-0.9) node[pos=0.5, yshift=-0.5cm] {\small $R_2{=}4$};
+
+	%\draw[dotted] (4.4,1.5) -- (4.4,-0.9);
+
+\end{RTGrid}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Non-preemptive EDF schedulability test}
+
+
+\vspace*{-0.1cm}
+
+
+\begin{minipage}{0.20\textwidth} 	                        
+	\begin{center}
+		{\small
+			\begin{tabular}{l|cccc}
+				& $C_i$     & $T_i$  \\ \hline
+				$\tau_1$ & $1.00$ & $2.00$   \\
+					$\tau_2$ & $1.00$ & $4.00$ \\
+					$\tau_3$ & $0.50$ & $6.00$ 
+			\end{tabular}
+		}
+	\end{center}
+\end{minipage}          
+\begin{minipage}{0.1\textwidth}              
+	$ $             
+\end{minipage}
+\begin{minipage}{0.65\textwidth}        
+	{       \small
+		 Sort tasks in non-decreasing order of  periods.
+		
+		For $k$ from $1$ to $n$:
+		\vspace*{-0.3cm}
+		\begin{equation*}
+			\frac{B_k}{T_k} + \sum_{i=1}^k \frac{C_i}{T_i} \leq 1
+		\end{equation*}
+		\hspace*{1.3cm}	where $B_k = \max \{ C_j \, | \, T_j > T_k\}$  
+	}
+\end{minipage}
+	
+
+
+\begin{RTGrid}[width=.9\textwidth, height=3.8cm, nogrid=1, nonumbers=1,nosymbols=1]{3}{7}
+	\TaskNArrival{1}{0}{2.0}{4}
+	\TaskNArrival{2}{0}{4.0}{2}
+	\TaskNArrival{3}{0}{6.0}{2}
+
+%\only<1>{		
+%	\TaskExecution[color=red!50]{1}{1}{2}
+%	\TaskExecution[color=red!50]{1}{2}{3}
+%	\TaskExecution[color=red!50]{1}{4}{5}
+%	\TaskExecution[color=red!50]{1}{6}{6.7}
+%	\TaskExecution[color=blue!50]{2}{0}{1}
+%	\TaskExecution[color=blue!50]{2}{5}{6}
+%	\TaskExecution[color=green!50]{3}{3}{3.5}
+%}
+
+%\only<2>{		
+	\TaskExecution[color=red!50]{1}{0.5}{1.5}
+	\TaskExecution[color=red!50]{1}{2.5}{3.5}
+	\TaskExecution[color=red!50]{1}{4}{5}
+	\TaskExecution[color=red!50]{1}{6}{6.7}
+	\TaskExecution[color=blue!50]{2}{1.5}{2.5}
+	\TaskExecution[color=blue!50]{2}{5}{6}
+	\TaskExecution[color=green!50]{3}{0}{0.5}
+%}
+	
+%\only<3>{		
+%		\TaskExecution[color=red!50]{1}{0}{1}
+%		\TaskExecution[color=red!50]{1}{2.5}{3.5}
+%		\TaskExecution[color=red!50]{1}{4}{5}
+%		\TaskExecution[color=red!50]{1}{6}{6.7}
+%		\TaskExecution[color=blue!50]{2}{1}{2.5}
+%		\TaskExecution[color=blue!50]{2}{5}{6}
+%		\TaskExecution[color=green!50]{3}{3.5}{4}
+%}
+	
+	\node at (0.8,3.2) {$\tau_1$};
+	\node at (0.8,2.0) {$\tau_2$};
+	\node at (0.8,0.8) {$\tau_3$};
+	
+	\node at (1.1,0.2) {\footnotesize $0$};
+	%\node at (1.80,0.15) {\footnotesize $1$};
+	\node at (7.55,0.2) {\footnotesize $6$};
+	
+	\node at (1.1,1.3) {\footnotesize $0$};
+	%\node at (3.55,1.4) {\footnotesize $3$};
+	\node at (5.4,1.3) {\footnotesize $4$};
+	
+	
+	\node at (1.1,2.45) {\footnotesize $0$};
+	%\node at (1.80,2.55) {\footnotesize $1$};
+	\node at (3.2,2.45) {\footnotesize $2$};
+	\node at (5.4,2.45) {\footnotesize $4$};
+	\node at (7.55,2.45) {\footnotesize $6$};
+	
+	% \draw[decorate,decoration={brace,amplitude=5pt}] (3.55,-0.15) -- (0.9,-0.15) node[pos=0.5, yshift=-0.5cm] {\small $s_2{=}3$};
+	%	\draw[dotted] (3.55,1.5) -- (3.55,-0.15);
+	
+	\node at (2.0,-0.9) {};
+	
+
+	\draw[decorate,decoration={brace,amplitude=5pt}] (5.4,-0.0) -- (1.2,-0.0) node[pos=0.5, yshift=-0.3cm] {\scriptsize $T_2{=}4$};
+	
+	\draw[dotted] (5.4,3.0) -- (5.4,0.0);
+\end{RTGrid}
+
+
+\vspace*{-1.2cm}
+
+{\small 
+\begin{equation*}
+\text{For } k{=}2:	B_2/T_2 + C_1/T_1 + C_2/T_2 = 0.5/4+1/2+1/4 =  0.875 \leq 1
+\end{equation*}
+}
+
+
+
+\begin{thebibliography}{10}
+	\beamertemplatearticlebibitems
+	
+	\tiny
+	\bibitem{Jeffay} K. Jeffay, D.F. Stanat and C.U. Martel, On non-preemptive
+	scheduling of period and sporadic tasks (1991)
+\end{thebibliography}
+
+
+\end{frame}
+
+
+
+
+\begin{frame}
+	\frametitle{0–1 Integer Linear Programming  (ILP)  model}
+
+{\scriptsize 	 
+\begin{align}
+	\text{max.}~
+	& \sum_{i=1}^n \sum_{j=1}^m
+	\frac{A_i^j}{T_i} \cdot x_i^j &&
+	&& \text{\color{blue!60!black}Maximize accuracy}
+	\label{model:obj}\\
+	\text{s.t.}~
+	& B_k/T_k + \sum_{i=1}^k \sum_{j=1}^m
+	x_i^j \cdot C_i^j/T_i \leq 1,
+	&& \forall\, 1 \leq k \leq n
+	&& \text{\color{blue!60!black}Schedulability test}
+	\label{model:const_sched}\\
+	& B_k \geq C_i^j \cdot x_i^j,
+	&& \forall\, k < i \leq n,
+	&& \text{\color{blue!60!black}Blocking factor} 
+	 \\
+	& 
+	&& \forall\, 1 \leq j \leq m
+	&& \nonumber  \\
+	& \sum_{j=1}^m x_i^j = 1,
+	&& \forall\, 1 \leq i \leq n
+	&& \text{\color{blue!60!black}One assignment}
+	\label{model:const_only_one}\\
+	& x_i^j \in \{0,1\},
+	&& \forall\, 1 \leq i \leq n,
+	&& \text{\color{blue!60!black}Binary decision} 
+	\label{model:const_binary} \nonumber\\
+	&  
+	&& 
+	1 \leq j \leq m
+	&& \text{\color{blue!60!black}variables}
+\end{align}
+
+
+}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Branch-and-bound  (B\&B)}
+	\begin{tikzpicture}[xscale=0.45,->,>=stealth',
+		level 1/.style={sibling distance=9.8cm, level distance=1.4cm},
+		level 2/.style={sibling distance=5.2cm, level distance=1.4cm},
+		level 3/.style={sibling distance=2.2cm, level distance=1.4cm}]
+		
+		\tikzset{
+			treenode/.style = {align=center, inner sep=0pt, text centered,
+				font=\sffamily},
+			node_1/.style = {treenode, circle, draw=black, fill=green!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_n/.style = {treenode, circle, draw=black, fill=blue!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_0/.style = {treenode, circle, draw=black, fill=black!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_3/.style = {treenode, circle, draw=black, fill=brown!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny}
+		}
+		% Root node
+		\node [node_0] (root) {}
+		child{ node [node_1] (A) {\tiny $low$}
+			child{ node [node_n] (A2) {$low$}
+				child{ node [node_3] (A3) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t32) {$high$} edge from parent node[pos=0.7]  {}}
+				edge from parent node[xshift=-0.1cm,pos=0.7] {}
+			}
+			child{ node [node_n] {$high$}
+				child{ node  [node_3] (t33) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t34) {$high$} edge from parent node[pos=0.7] {}}
+				edge from parent node[xshift=-0.1cm,pos=0.7] {}
+			}
+		}
+		child{ node [node_1] (B) {$high$}
+			child{ node [node_n] {$low$}
+				child{ node [node_3] (t35) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t36) {$high$} edge from parent node[pos=0.5,xshift=0.5cm] {}}
+				edge from parent node[xshift=-0.6cm,pos=0.5] {}
+			}
+			child{ node [node_n] {$high$}
+				child{ node [node_3] (t37) {$low$} edge from parent node[pos=0.5,xshift=-0.45cm] {}}
+				child{ node [node_3] (t38) {$high$} edge from parent node[pos=0.5] {  }}
+				edge from parent node[xshift=0.6cm,pos=0.5] {}
+			}
+		};
+		
+		\path (root) -- (A) node[midway, above, xshift=-0.3cm] {};
+		\path (root) -- (B) node[midway, above, xshift=0.3cm] { };
+		
+		\node at ($(A)+(-6cm,0)$) (t1) {$\tau_1$};
+		\node at (A2 -| t1) {$\tau_2$};
+		\node at (A3 -| t1) {$\tau_3$};
+		
+		
+		\end{tikzpicture}
+		
+		\begin{block}{}
+			Each level represents a task ($\tau_1, \tau_2, \tau_3$).\\
+			Each node  represents an accuracy (\emph{low} or \emph{high}).\\
+			{\scriptsize low accuracy $\implies$ low inference times while  high accuracy $\implies$ high inference times.}
+			Find a pruning rate assignment for each task such that:\\ 
+			i) the average precision is maximized, and ii) tasks are schedulable.
+		\end{block}
+		
+		
+		
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Branch-and-bound  (B\&B)}
+	\begin{tikzpicture}[xscale=0.45,->,>=stealth',
+		level 1/.style={sibling distance=9.8cm, level distance=1.4cm},
+		level 2/.style={sibling distance=5.2cm, level distance=1.4cm},
+		level 3/.style={sibling distance=2.2cm, level distance=1.4cm}]
+		
+		\tikzset{
+			treenode/.style = {align=center, inner sep=0pt, text centered,
+				font=\sffamily},
+			node_1/.style = {treenode, circle, draw=black, fill=green!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_n/.style = {treenode, circle, draw=black, fill=blue!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_0/.style = {treenode, circle, draw=black, fill=black!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_3/.style = {treenode, circle, draw=black, fill=brown!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny}
+		}
+		% Root node
+		\node [node_0] (root) {}
+		child{ node [node_1,draw=red] (A) {\tiny $low$}
+			child{ node [node_n] (A2) {$low$}
+				child{ node [node_3] (A3) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t32) {$high$} edge from parent node[pos=0.7]  {}}
+				edge from parent node[xshift=-0.1cm,pos=0.7] {}
+			}
+			child{ node [node_n,draw=red] {$high$}
+				child{ node  [node_3,draw=red] (t33) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t34) {$high$} edge from parent[black] node[pos=0.7] {}}
+				edge from parent[red] node[xshift=-0.1cm,pos=0.7] {}
+			}
+		}
+		child{ node [node_1,thick] (B) {$high$}
+			child{ node [node_n,dotted,semithick] {$low$}
+				child{ node [node_3] (t35) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3,thin,solid] (t36) {$high$} edge from parent[solid] node[pos=0.5,xshift=0.5cm] {}}
+				edge from parent[dotted,thick] node[xshift=-0.6cm,pos=0.5,solid] {}
+			}
+			child{ node [node_n] {$high$}
+				child{ node [node_3] (t37) {$low$} edge from parent node[pos=0.5,xshift=-0.45cm] {}}
+				child{ node [node_3] (t38) {$high$} edge from parent node[pos=0.5] {}}
+				edge from parent node[xshift=0.6cm,pos=0.5] {}
+			}
+		};
+		
+		\path[draw=red] (root) -- (A) node[midway, above, xshift=-0.3cm] {};
+		\path (root) -- (B) node[midway, above, xshift=0.3cm] { };
+		
+		\node at ($(A)+(-6cm,0)$) (t1) {$\tau_1$};
+		\node at (A2 -| t1) {$\tau_2$};
+		\node at (A3 -| t1) {$\tau_3$};
+		
+		\draw (3.9,-1) rectangle (6,-1.82);
+		\draw[opacity=0.3,fill=gray] (-9.5,0.4) rectangle (0.1,-4.6);
+		
+	\end{tikzpicture}
+	
+	
+	\begin{block}{Current state}
+		Left sub-tree has been explored, we are at $\tau_1\gets high$, and\\ 
+		$\tau_1 \gets low, \tau_2\gets high, \tau_3 \gets low$ is the best solution found so far.
+	\end{block}
+	
+	\begin{block}{Schedulability branch-pruning}
+	If $\tau_1 \gets high, \tau_2\gets \textbf{low}, \tau_3 \gets \textbf{low}$ is not schedulable then no other assignment can be schedulable.
+	\end{block}
+	
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Branch-and-bound  (B\&B)}
+	\begin{tikzpicture}[xscale=0.45,->,>=stealth',
+		level 1/.style={sibling distance=9.8cm, level distance=1.4cm},
+		level 2/.style={sibling distance=5.2cm, level distance=1.4cm},
+		level 3/.style={sibling distance=2.2cm, level distance=1.4cm}]
+		
+		\tikzset{
+			treenode/.style = {align=center, inner sep=0pt, text centered,
+				font=\sffamily},
+			node_1/.style = {treenode, circle, draw=black, fill=green!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_n/.style = {treenode, circle, draw=black, fill=blue!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_0/.style = {treenode, circle, draw=black, fill=black!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny},
+			node_3/.style = {treenode, circle, draw=black, fill=brown!30,
+				text width=1.5em, minimum size=1.5em,font=\tiny}
+		}
+		% Root node
+		\node [node_0] (root) {}
+		child{ node [node_1,draw=red] (A) {\tiny $low$}
+			child{ node [node_n] (A2) {$low$}
+				child{ node [node_3] (A3) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t32) {$high$} edge from parent node[pos=0.7]  {}}
+				edge from parent node[xshift=-0.1cm,pos=0.7] {}
+			}
+			child{ node [node_n,draw=red] {$high$}
+				child{ node  [node_3,draw=red] (t33) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3] (t34) {$high$} edge from parent[black] node[pos=0.7] {}}
+				edge from parent[red] node[xshift=-0.1cm,pos=0.7] {}
+			}
+		}
+		child{ node [node_1,thick] (B) {$high$}
+			child{ node [node_n,dotted,semithick] {$low$}
+				child{ node [node_3] (t35) {$low$} edge from parent node[pos=0.7] {}}
+				child{ node [node_3,dotted] (t36) {$high$} edge from parent[dotted] node[pos=0.5,xshift=0.5cm] {}}
+				edge from parent node[xshift=-0.6cm,pos=0.5,solid] {}
+			}
+			child{ node [node_n] {$high$}
+				child{ node [node_3] (t37) {$low$} edge from parent node[pos=0.5,xshift=-0.45cm] {}}
+				child{ node [node_3] (t38) {$high$} edge from parent node[pos=0.5] {}}
+				edge from parent node[xshift=0.6cm,pos=0.5] {}
+			}
+		};
+		
+		\path[draw=red] (root) -- (A) node[midway, above, xshift=-0.3cm] {};
+		\path (root) -- (B) node[midway, above, xshift=0.3cm] { };
+		
+		\node at ($(A)+(-6cm,0)$) (t1) {$\tau_1$};
+		\node at (A2 -| t1) {$\tau_2$};
+		\node at (A3 -| t1) {$\tau_3$};
+		
+		\draw (1.9-0.55,-1-1.36) rectangle (4-0.55,-1.82-1.36);
+		\draw[opacity=0.3,fill=gray] (-9.5,0.4) rectangle (0.1,-4.6);
+		
+	\end{tikzpicture}
+	
+	
+	\begin{block}{Current state}
+		Left sub-tree has been explored, we are at $\tau_1\gets high, \tau_2\gets low$, and\\ 
+		\mbox{$\tau_1 \gets low, \tau_2\gets high, \tau_3 \gets low$ is still the best solution found so~far.}
+	\end{block}
+	
+	\begin{block}{Accuracy branch-pruning}
+		If $\tau_1 \gets high, \tau_2\gets low, \tau_3 \gets \textbf{high}$ does not have better accuracy then no other assignment can be better (\emph{i.e.,} $\tau_3 \gets low$).
+	\end{block}
+	
+\end{frame}
+
+\begin{frame}
+	\frametitle{Schedulability experiments}
+	\framesubtitle{Schedulability ratio with and without pruning}
+
+\begin{minipage}[c]{0.35\textwidth}
+{\scriptsize\raggedright
+\begin{itemize}\setlength{\itemsep}{7pt}\setlength{\leftmargini}{1.1em}
+  \setlength{\rightmargin}{0pt}
+  \item[{\color{blue!80!black}$\bullet$}]
+    Random task sets of \textbf{six tasks}, utilizations drawn with
+    \textbf{RandFixedSum}.
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{250 task sets} per utilization point, from $0.1$ to $4.0$.
+  \item[{\color{blue!80!black}$\bullet$}]
+    Periods sampled \textbf{log-uniformly} between $10$ and $100$\,ms.
+  \item[{\color{blue!80!black}$\bullet$}]
+    Each task takes its \textbf{profile at random} from the benchmark.
+\end{itemize}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\textwidth}
+	\begin{center}
+		
+		\begin{tikzpicture}
+			\begin{axis}[
+				width=\linewidth,
+				height=5.6cm,
+				xlabel={Utilization},
+				ylabel={Schedulability},
+				xmin=0.1, xmax=4.0,
+				ymin=0, ymax=1.05,
+				grid=both,
+				tick label style={font=\scriptsize},
+				label style={font=\scriptsize},
+				ytick={0,0.2,0.4,0.6,0.8,1.0},
+				yticklabel={\pgfmathparse{\tick*100}\pgfmathprintnumber{\pgfmathresult}\%},
+				legend style={
+					at={(0.85,0.75)},
+					anchor=south,
+					legend columns=1,
+					font=\tiny,
+				},
+				mark size=2pt,
+				]
+				
+				\addplot[
+				blue,
+				mark=o,
+				mark repeat=3,
+				line width=1pt
+				] coordinates {
+					(0.10,1.000)
+					(0.20,1.000)
+					(0.30,0.824)
+					(0.40,0.700)
+					(0.50,0.540)
+					(0.60,0.348)
+					(0.70,0.220)
+					(0.80,0.148)
+					(0.90,0.056)
+					(1.00,0.000)
+					(1.10,0.000)
+					(1.20,0.000)
+					(1.30,0.000)
+					(1.40,0.000)
+					(1.50,0.000)
+					(1.60,0.000)
+					(1.70,0.000)
+					(1.80,0.000)
+					(1.90,0.000)
+					(2.00,0.000)
+					(2.10,0.000)
+					(2.20,0.000)
+					(2.30,0.000)
+					(2.40,0.000)
+					(2.50,0.000)
+					(2.60,0.000)
+					(2.70,0.000)
+					(2.80,0.000)
+					(2.90,0.000)
+					(3.00,0.000)
+					(3.10,0.000)
+					(3.20,0.000)
+					(3.30,0.000)
+					(3.40,0.000)
+					(3.50,0.000)
+					(3.60,0.000)
+					(3.70,0.000)
+					(3.80,0.000)
+					(3.90,0.000)
+					(4.00,0.000)
+				};
+				\addlegendentry{baseline}
+				
+				\addplot[
+				red,
+				mark=square*,
+				mark repeat=3,
+				line width=1pt
+				] coordinates {
+					(0.10,1.000)
+					(0.20,1.000)
+					(0.30,0.996)
+					(0.40,0.968)
+					(0.50,0.960)
+					(0.60,0.884)
+					(0.70,0.856)
+					(0.80,0.792)
+					(0.90,0.748)
+					(1.00,0.744)
+					(1.10,0.692)
+					(1.20,0.600)
+					(1.30,0.564)
+					(1.40,0.588)
+					(1.50,0.516)
+					(1.60,0.516)
+					(1.70,0.464)
+					(1.80,0.384)
+					(1.90,0.440)
+					(2.00,0.368)
+					(2.10,0.416)
+					(2.20,0.380)
+					(2.30,0.396)
+					(2.40,0.336)
+					(2.50,0.260)
+					(2.60,0.276)
+					(2.70,0.264)
+					(2.80,0.304)
+					(2.90,0.280)
+					(3.00,0.244)
+					(3.10,0.224)
+					(3.20,0.216)
+					(3.30,0.204)
+					(3.40,0.224)
+					(3.50,0.124)
+					(3.60,0.184)
+					(3.70,0.156)
+					(3.80,0.192)
+					(3.90,0.136)
+					(4.00,0.168)
+				};
+				\addlegendentry{B\&B}
+				
+				
+			\end{axis}
+		\end{tikzpicture}
+	
+	\end{center}
+\end{minipage}
+	
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Schedulability experiments}
+	\framesubtitle{Accuracy drop with pruning for B\&B method}
+
+
+\begin{center}
+	
+	   \begin{tikzpicture}
+		\begin{axis}[
+			width=0.9\linewidth,
+			height=6.5cm,
+			xlabel={Utilization},
+			ylabel={Accuracy decrease},
+			xmin=0.1, xmax=4.0,
+			%ymin=0, ymax=0.05,
+			grid=both,
+			tick label style={font=\scriptsize},
+			label style={font=\scriptsize},
+			%ytick={0,0.005,0.010,0.015,0.020},
+			yticklabel={\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}\%},
+			legend style={
+				at={(0.20,0.75)},
+				anchor=south,
+				legend columns=1,
+				font=\tiny,
+			},
+			mark size=2pt,
+			]
+			
+			\addplot[
+			green!60!black,
+			mark=triangle*,
+			thick
+			] coordinates {
+				(0.10,0.000)
+				(0.20,0.000)
+				(0.30,0.000)
+				(0.40,0.1)
+				(0.50,0.1)
+				(0.60,0.1)
+				(0.70,0.2)
+				(0.80,0.2)
+				(0.90,0.2)
+				(1.00,0.3)
+				(1.10,0.3)
+				(1.20,0.3)
+				(1.30,0.7)
+				(1.40,0.8)
+				(1.50,0.6)
+				(1.60,0.5)
+				(1.70,0.5)
+				(1.80,0.6)
+				(1.90,0.8)
+				(2.00,0.9)
+				(2.10,1.0)
+				(2.20,0.7)
+				(2.30,0.8)
+				(2.40,1.0)
+				(2.50,1.0)
+				(2.60,1.2)
+				(2.70,0.9)
+				(2.80,1.0)
+				(2.90,1.2)
+				(3.00,1.4)
+				(3.10,1.1)
+				(3.20,1.8)
+				(3.30,1.4)
+				(3.40,1.6)
+				(3.50,1.5)
+				(3.60,1.7)
+				(3.70,1.5)
+				(3.80,1.6)
+				(3.90,1.9)
+				(4.00,2.1)
+			};
+			\addlegendentry{accuracy drop}
+			
+		\end{axis}
+	\end{tikzpicture}
+
+\end{center}	
+	
+\end{frame}
+
+
+\input{frames_conclusion}
+
+\end{document}

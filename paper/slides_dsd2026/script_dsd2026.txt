@@ -1,0 +1,129 @@
+SLIDE 0
+
+Good afternoon, everyone.
+
+I am Jiahe Guo, and this is Mouad Zouhdi. We are both master's students doing our final-year internship at LAAS, the Laboratory for Analysis and Architecture of Systems, in Toulouse, France, under the supervision of Dr. Tomasz Kloda.
+
+In this work, we study a specific accelerator, the Edge TPU, designed for edge AI systems. Because its memory is very limited, we apply a deep neural network compression technique, pruning, to improve its performance. Our co-authors then propose a scheduling strategy that exploits the pruning results.
+
+SLIDE 1
+
+Some context first. The Edge TPU is an embedded AI accelerator designed by Google and sold under the Coral brand. TPU stands for Tensor Processing Unit, so it is specialized for matrix multiplication, which is the core operation of deep neural networks.
+
+SLIDE 2
+
+It is built on the systolic array principle, introduced by Kung and Leiserson at the end of the 1970s. The idea is to maximize the computation performed on every data element brought in from memory, which is exactly what a neural network needs: heavy reuse over very large volumes of data.
+
+SLIDE 3
+
+Because of the systems it targets, the accelerator comes with three constraints, and these three shape the rest of this talk.
+
+First, the set of supported operations is limited, and vision networks are the primary target. Any unsupported operation makes the rest of the graph fall back to the CPU, which costs a great deal of performance.
+
+Second, all parameters must be in int8 precision.
+
+Third, and this is the important one, the internal memory is limited to 8 megabytes. Beyond that size, the remaining parameters are streamed from host memory at every inference, which adds a significant latency overhead. So the lighter the model, the lower its latency.
+
+SLIDE 4
+
+Let us look at some performance measurements of the Edge TPU. The top table compares, for a few models, the latency on an embedded CPU with the latency on the Edge TPU.
+
+The general trend is that the speedup is much larger for models that fit entirely on chip than for models that only partially fit: GoogLeNet fits and reaches a large speedup, while VGG-19 only reaches 1.8.
+
+The bottom table illustrates the memory behavior of the Edge TPU: it compares the first inference of a model with the second. The first is far slower than the ones that follow, because the weights have to be loaded into the internal memory first. Keep this in mind, it will justify a design choice later.
+
+SLIDE 5
+
+Pruning is a software technique that removes the parameters that contribute the least to accuracy.
+
+It comes in two categories: unstructured pruning, which zeroes out individual weights, and structured pruning, which removes whole groups such as neurons or filters.
+
+In this work we use the structured variant. Unstructured pruning produces sparse matrices that most platforms cannot exploit, so the model never actually gets faster. Structured pruning costs more accuracy for the same parameter reduction, but it genuinely shrinks the model, and with it the latency.
+
+In practice, we rank the structures of the whole network according to an importance criterion. Many such criteria exist in the literature, organized in families.
+
+SLIDE 6
+
+We ran a benchmark on the USB Edge TPU with classification models representative of the supported operations, importance criteria representative of these families, and nine compression rates, from 10 to 90 percent of parameters removed. The fine-tuning protocol is taken from an existing pruning benchmark, PruningBench, applied to CIFAR-100. For each configuration we measure the first, cold inference, and then 200 steady-state inferences.
+
+SLIDE 7
+
+Here is the latency speedup of the pruned models against the compression rate.
+
+The key point of the benchmark is here: as soon as a model drops below the 8 megabyte mark, we observe massive speedups, sometimes above 60, whereas models that already fit gain at most a factor of 2. So latency is not a smooth function of the pruning rate, it has a cliff, and that cliff is what the second half of the talk exploits.
+
+SLIDE 8
+
+On the accuracy side, our two indicators are the accuracy immediately after pruning, before any fine-tuning, and the fine-tuning trajectory at 90 percent. Both indicators agree, and they reproduce the ranking of criteria already documented in the literature.
+
+SLIDE 9
+
+But the criteria that are best for accuracy are not the best for latency. Taylor importance, in red, is consistently the worst in latency speedup, while very often the best in accuracy.
+
+SLIDE 10
+
+To complement this work, we considered a practical use case: a precision weeding drone. It flies over a plot along GPS lanes, camera facing down, with a spray boom under the frame. It carries a single accelerator, because on a drone every gram and every watt is paid for in flight autonomy.
+
+On this single TPU, four classifiers analyze each image tile at different rates. Weed present or not, every 20 milliseconds: this triggers the nozzle, and the deadline is physical, if we miss it the plant has already passed under the boom. Crop growth stage every 33 milliseconds, weed species every 100, which is where accuracy matters most, and ground cover every 200 for the agronomic map. The models used here come from our CIFAR-100 benchmark, so the scenario is illustrative, but the timing constraints and the inference times are real.
+
+With the unpruned models, this task set requires 130 percent of the accelerator. The system is infeasible, the drone cannot fly. But each network exists in nine pruned versions, each with its own latency and accuracy from the benchmark. So the question is: which version do we select for each network so that everything fits within the deadlines, while maximizing the overall accuracy?
+
+SLIDE 11 (1)
+
+We consider a set of sporadic tasks. Each task is associated with a DNN and characterized by its worst-case inference time Ci, its minimum inter-arrival time Ti, and its accuracy, which depends on the pruning rate applied to its model.
+
+On this schedule we have three tasks under non-preemptive EDF. We just saw that reloading a model is expensive, so we never interrupt an inference. The task set is schedulable, but the processor is idle a large fraction of the time. A natural idea is therefore to spend that slack on accuracy, by running less aggressively pruned, and therefore larger and slower, models.
+
+SLIDE 11 (2)
+
+Here we do exactly that. The system is now fully used and the accuracy is higher. Inference takes longer, but we are still schedulable: no deadline is missed.
+
+SLIDE 11 (3)
+
+If we keep taking bigger models, at some point the task set becomes unschedulable. So the first question is: how do we test schedulability?
+
+SLIDE 12
+
+We use the test proposed by Jeffay et al., a utilization-based condition. Tasks are sorted by non-decreasing periods, and for each task k the condition on the right must hold. It has two parts.
+
+First, the blocking factor Bk. Because execution is non-preemptive, a job can be released just after a job with a longer deadline has started, and it then has to wait for it to complete. In the figure, the blue task is blocked by the green one even though green has a later deadline. Bk is the processing time lost to this priority inversion.
+
+Second, the interference term, the sum of Ci over Ti: once released, the blue task is also delayed by the tasks with shorter deadlines, like the red one, which are executed first.
+
+SLIDE 13
+
+We propose an ILP whose objective is to select the pruning rate of each task so as to maximize the overall accuracy, while guaranteeing that condition.
+
+Line one is the objective. Constraint two is the non-preemptive EDF condition. Constraint three computes the blocking factor, the largest inference time among the tasks with a longer period. Constraint four enforces that exactly one pruned version is selected per task, and constraint five states that the decision variables are binary.
+
+SLIDE 14
+
+To solve it we use a branch-and-bound method. The search space is a tree: each level is one task, each node a choice of pruning rate. A high pruning rate gives low accuracy and a short inference time, a low pruning rate the opposite.
+
+In the paper each task chooses among nine rates; here, for clarity, we show two options per task, low or high accuracy.
+
+Each leaf is a complete assignment, and we look for the one that maximizes the average accuracy while keeping the task set schedulable. To speed up the exploration, we use two branch-pruning techniques.
+
+SLIDE 15
+
+The first one is schedulability branch-pruning. Suppose the left part of the tree has been explored, and the assignment in red is the best solution so far. We are now evaluating tau one with high accuracy. We give the fastest versions to all the remaining tasks and test schedulability. If even this assignment is not schedulable, then none in this branch can be, since any other choice only increases inference times. So we cut the whole branch: if a deadline is already missed, adding execution time cannot help.
+
+SLIDE 16
+
+The second technique is based on accuracy. In this other example, the best solution so far is the same, and we are now at tau two with low accuracy. We give the remaining task its most accurate version and compute the resulting accuracy. If this upper bound does not beat the best solution so far, no assignment in this branch can improve it, so the branch is cut.
+
+SLIDE 17
+
+For the experiments, we generate random task sets over a wide range of utilizations, and for each utilization we measure the fraction of sets that can be scheduled.
+
+In blue, the baseline, where every task runs its unpruned model. In red, our method, which selects for each task the most accurate version that keeps the set schedulable. The baseline collapses as soon as the unpruned utilization approaches one, whereas pruning lowers the effective utilization of each task, so our method stays schedulable well beyond that point.
+
+SLIDE 18
+
+The last result is the accuracy loss. The higher the utilization, the more aggressive the pruning rates have to be, so the loss grows with utilization. But it stays very small: about 2 percent for the most loaded task sets, and that buys a large gain in schedulable utilization.
+
+SLIDE 19
+
+To conclude, two messages. On the Edge TPU, latency is governed by whether the model fits in the 8 megabyte on-chip memory: pruning a model below that threshold buys speedups of up to 60, pruning a model that already fits buys almost nothing. And it is this non-linearity that makes pruning a scheduling knob: selecting one pruning rate per task keeps task sets schedulable far beyond the point where the unpruned system fails, at a cost of about 2 percent of accuracy.
+
+Thank you for your attention.

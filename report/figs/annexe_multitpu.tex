@@ -1,0 +1,189 @@
+% genere par make_annexe_multitpu.py, ne pas editer a la main
+
+\chapter{Mesures détaillées de l'axe multi-TPU}
+\label{ann:multitpu}
+
+Cette annexe rassemble les relevés par configuration de l'axe multi-TPU, dont le chapitre~\ref{chap:resultats} ne présente que des synthèses et quelques cas. Le tableau~\ref{tab:ann_multitpu} donne, pour chacun des 43 checkpoints mesurés, son besoin de logement, sa précision et les deux répartitions que la mesure retient ; le tableau~\ref{tab:ann_ft} rend compte du coût de la récupération et de l'effondrement de précision que l'élagage provoque avant elle ; le tableau~\ref{tab:ann_shapes} énumère les 22 répartitions possibles.
+
+\section{Synthèse par checkpoint}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}llrrrrlrlr@{}}
+\caption[Synthèse de l'axe multi-TPU]{Synthèse par checkpoint de l'axe multi-TPU : besoin de logement, précision INT8 relevée sur 5000 images de validation, et répartitions mesurées comme les meilleures en latence puis en débit, avec les valeurs qu'elles atteignent.}\label{tab:ann_multitpu}\\
+\toprule
+Modèle & Élagage & Taille & Besoin & Top-1 & Top-5 & \multicolumn{2}{c}{Meilleure latence} & \multicolumn{2}{c}{Meilleur débit} \\
+\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+ & (\%) & (Mio) & & (\%) & (\%) & Répartition & (ms) & Répartition & (im/s) \\
+\midrule
+\endfirsthead
+\toprule
+Modèle & Élagage & Taille & Besoin & Top-1 & Top-5 & \multicolumn{2}{c}{Meilleure latence} & \multicolumn{2}{c}{Meilleur débit} \\
+\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+ & (\%) & (Mio) & & (\%) & (\%) & Répartition & (ms) & Répartition & (im/s) \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+GoogLeNet & -- & 6,57 & 2 & 68,52 & 89,82 & 1$\times$8 & 5,2 & 1$\times$8 & 1553 \\
+\addlinespace[2pt]
+BN-Inception & -- & 11,08 & 2 & 69,64 & 91,84 & 2$\times$4 & 5,3 & 2$\times$4 & 988 \\
+BN-Inception & 52 & 5,42 & 1 & 66,66 & 90,56 & 1$\times$8 & 4,0 & 1$\times$8 & 2007 \\
+\addlinespace[2pt]
+Inception-V3 & -- & 23,24 & 5 & 77,58 & 94,02 & 4$\times$2 & 16,6 & 4$\times$2 & 221 \\
+Inception-V3 & 65 & 8,31 & 2 & 74,04 & 93,00 & 2$\times$4 & 8,8 & 2$\times$4 & 576 \\
+Inception-V3 & 84 & 3,99 & 1 & 69,62 & 90,08 & 1$\times$8 & 5,1 & 1$\times$8 & 1560 \\
+\addlinespace[2pt]
+Inception-V4 & -- & 41,60 & $>8$ & 80,28 & 95,16 & 8 & 40,8 & 8 & 111 \\
+Inception-V4 & 10 & 37,58 & 8 & 78,78 & 95,06 & 8 & 36,3 & 8 & 115 \\
+Inception-V4 & 26 & 30,74 & 8 & 78,72 & 94,76 & 8 & 34,4 & 7$+$1 & 127 \\
+Inception-V4 & 38 & 25,95 & 6 & 78,32 & 95,08 & 4$\times$2 & 29,4 & 4$\times$2 & 135 \\
+Inception-V4 & 48 & 21,84 & 5 & 78,34 & 94,62 & 4$\times$2 & 22,1 & 4$\times$2 & 192 \\
+Inception-V4 & 59 & 17,44 & 4 & 77,76 & 94,62 & 4$\times$2 & 18,7 & 4$\times$2 & 260 \\
+Inception-V4 & 60 & 17,04 & 4 & 77,80 & 94,54 & 4$\times$2 & 18,1 & 4$\times$2 & 246 \\
+Inception-V4 & 70 & 12,56 & 3 & 77,68 & 94,10 & 3$\times$2$+$2 & 18,1 & 3$\times$2$+$2 & 289 \\
+Inception-V4 & 80 & 8,66 & 2 & 75,38 & 93,18 & 2$\times$4 & 11,9 & 2$\times$4 & 485 \\
+Inception-V4 & 90 & 4,59 & 1 & 71,34 & 91,44 & 1$\times$8 & 6,9 & 1$\times$8 & 1150 \\
+Inception-V4 & 91 & 4,18 & 1 & 70,04 & 90,78 & 1$\times$8 & 7,4 & 1$\times$8 & 1073 \\
+\addlinespace[2pt]
+Inception-ResNet-V2 & -- & 55,36 & $>8$ & 80,60 & 95,32 & 8 & 46,8 & 8 & 83 \\
+Inception-ResNet-V2 & 31 & 38,87 & $>8$ & 78,86 & 94,94 & 8 & 44,9 & 7$+$1 & 76 \\
+Inception-ResNet-V2 & 39 & 34,54 & 8 & 79,20 & 94,92 & 8 & 42,3 & 8 & 103 \\
+Inception-ResNet-V2 & 45 & 31,06 & 7 & 78,54 & 94,80 & 8 & 39,9 & 7$+$1 & 123 \\
+Inception-ResNet-V2 & 60 & 22,79 & 5 & 77,22 & 94,32 & 4$\times$2 & 26,8 & 5$+$3 & 164 \\
+Inception-ResNet-V2 & 68 & 18,47 & 4 & 76,40 & 94,08 & 4$\times$2 & 22,5 & 4$\times$2 & 223 \\
+Inception-ResNet-V2 & 70 & 17,40 & 4 & 76,70 & 94,18 & 4$\times$2 & 21,7 & 4$\times$2 & 217 \\
+Inception-ResNet-V2 & 78 & 12,81 & 3 & 76,20 & 93,80 & 3$\times$2$+$2 & 23,6 & 3$\times$2$+$1$\times$2 & 250 \\
+Inception-ResNet-V2 & 86 & 8,46 & 2 & 75,36 & 93,30 & 2$\times$4 & 12,5 & 2$\times$4 & 434 \\
+Inception-ResNet-V2 & 87 & 8,29 & 2 & 74,40 & 93,06 & 2$\times$4 & 13,6 & 1$\times$8 & 412 \\
+Inception-ResNet-V2 & 95 & 3,43 & 1 & 70,18 & 90,70 & 1$\times$8 & 6,9 & 1$\times$8 & 1161 \\
+\addlinespace[2pt]
+ResNet-50 & -- & 25,09 & 5 & 73,42 & 93,10 & 5$+$3 & 17,3 & 5$+$3 & 330 \\
+ResNet-50 & 47 & 13,50 & 2 & 72,66 & 93,02 & 2$\times$4 & 7,8 & 2$\times$4 & 684 \\
+\addlinespace[2pt]
+ResNet-101 & -- & 43,88 & $>8$ & 74,66 & 93,56 & 8 & 32,1 & 6$+$2 & 161 \\
+ResNet-101 & 7 & 40,71 & 6 & 76,04 & 93,96 & 8 & 24,8 & 6$+$1$\times$2 & 213 \\
+ResNet-101 & 19 & 35,83 & 7 & 75,42 & 93,48 & 8 & 34,1 & 7$+$1 & 205 \\
+ResNet-101 & 28 & 31,64 & 5 & 75,80 & 93,44 & 8 & 25,7 & 5$+$3 & 236 \\
+ResNet-101 & 43 & 25,44 & 4 & 75,52 & 93,58 & 4$\times$2 & 16,8 & 4$\times$2 & 332 \\
+ResNet-101 & 45 & 24,36 & 4 & 74,48 & 93,68 & 4$\times$2 & 22,0 & 4$\times$2 & 260 \\
+ResNet-101 & 58 & 19,08 & 3 & 75,06 & 93,46 & 4$\times$2 & 15,5 & 3$\times$2$+$2 & 414 \\
+ResNet-101 & 73 & 12,39 & 2 & 74,94 & 93,20 & 2$\times$4 & 9,9 & 2$\times$4 & 636 \\
+ResNet-101 & 88 & 5,85 & 1 & 71,32 & 91,16 & 1$\times$8 & 5,4 & 1$\times$8 & 1490 \\
+ResNet-101 & 88 & 5,85 & 1 & 70,58 & 90,98 & 1$\times$8 & 5,0 & 1$\times$8 & 1617 \\
+\addlinespace[2pt]
+ResNet-152 & -- & 59,39 & $>8$ & 76,62 & 94,04 & 8 & 36,7 & 8 & 141 \\
+ResNet-152 & 58 & 25,37 & 4 & 75,94 & 94,12 & 4$\times$2 & 18,3 & 4$\times$2 & 329 \\
+ResNet-152 & 81 & 11,98 & 2 & 74,98 & 93,36 & 2$\times$4 & 10,4 & 2$\times$4 & 620 \\
+\end{longtable}
+}
+
+\clearpage
+\section{Récupération après élagage}
+
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}lrrrrrrr@{}}
+\caption[Journal des entraînements de l'axe multi-TPU]{Récupération des 36 checkpoints élagués de l'axe multi-TPU. Les précisions sont en flottant sur les 50 000 images de validation, ce qui les rend comparables entre elles ; la colonne « après coupe » est relevée avant toute récupération.}\label{tab:ann_ft}\\
+\toprule
+Modèle & Élagage & Époques & Calcul & \multicolumn{3}{c}{Top-1 flottant (\%)} & Écart \\
+\cmidrule(lr){5-7}
+ & (\%) & & (h GPU) & Référence & Après coupe & Récupéré & (pts) \\
+\midrule
+\endfirsthead
+\toprule
+Modèle & Élagage & Époques & Calcul & \multicolumn{3}{c}{Top-1 flottant (\%)} & Écart \\
+\cmidrule(lr){5-7}
+ & (\%) & & (h GPU) & Référence & Après coupe & Récupéré & (pts) \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+BN-Inception & 51,8 & 20 & 6,7 & 73,63 & 3,70 & 70,92 & $-$2,71 \\
+\addlinespace[2pt]
+Inception-V3 & 64,9 & 40 & 19,6 & 77,41 & 0,30 & 75,01 & $-$2,40 \\
+Inception-V3 & 83,5 & 60 & 25,9 & 77,41 & 0,10 & 71,41 & $-$6,00 \\
+\addlinespace[2pt]
+Inception-V4 & 9,8 & 15 & 7,6 & 80,12 & 47,92 & 79,78 & $-$0,33 \\
+Inception-V4 & 26,4 & 20 & 9,4 & 80,12 & 17,32 & 79,30 & $-$0,82 \\
+Inception-V4 & 38,0 & 40 & 18,2 & 80,12 & 2,82 & 79,21 & $-$0,90 \\
+Inception-V4 & 48,0 & 60 & 24,1 & 80,12 & 2,39 & 79,11 & $-$1,01 \\
+Inception-V4 & 58,6 & 60 & 22,9 & 80,12 & 1,27 & 78,53 & $-$1,59 \\
+Inception-V4 & 59,6 & 40 & 36,6 & 80,12 & 0,54 & 78,07 & $-$2,05 \\
+Inception-V4 & 70,4 & 75 & 65,1 & 80,12 & 0,19 & 77,96 & $-$2,16 \\
+Inception-V4 & 79,8 & 75 & 26,5 & 80,12 & 0,11 & 76,33 & $-$3,79 \\
+Inception-V4 & 89,6 & 90 & 56,5 & 80,12 & 0,10 & 73,17 & $-$6,96 \\
+Inception-V4 & 90,6 & 75 & 48,6 & 80,12 & 0,10 & 71,97 & $-$8,15 \\
+\addlinespace[2pt]
+Inception-ResNet-V2 & 30,6 & 40 & 55,7 & 80,26 & 24,31 & 79,49 & $-$0,77 \\
+Inception-ResNet-V2 & 38,6 & 40 & 22,8 & 80,26 & 13,93 & 79,49 & $-$0,77 \\
+Inception-ResNet-V2 & 45,0 & 40 & 21,4 & 80,26 & 6,74 & 79,44 & $-$0,82 \\
+Inception-ResNet-V2 & 60,3 & 60 & 30,0 & 80,26 & 0,62 & 78,62 & $-$1,64 \\
+Inception-ResNet-V2 & 68,1 & 40 & 43,8 & 80,26 & 0,54 & 78,04 & $-$2,22 \\
+Inception-ResNet-V2 & 70,1 & 75 & 79,9 & 80,26 & 0,32 & 78,38 & $-$1,88 \\
+Inception-ResNet-V2 & 78,5 & 75 & 72,0 & 80,26 & 0,14 & 77,26 & $-$3,00 \\
+Inception-ResNet-V2 & 86,2 & 75 & 66,4 & 80,26 & 0,11 & 76,24 & $-$4,02 \\
+Inception-ResNet-V2 & 86,6 & 90 & 37,5 & 80,26 & 0,14 & 76,05 & $-$4,21 \\
+Inception-ResNet-V2 & 95,1 & 90 & 29,3 & 80,26 & 0,10 & 71,50 & $-$8,76 \\
+\addlinespace[2pt]
+ResNet-50 & 46,9 & 40 & 14,3 & 75,85 & 2,24 & 75,17 & $-$0,69 \\
+ResNet-50 & 68,8 & 60 & 20,2 & 75,85 & 0,38 & 73,80 & $-$2,06 \\
+\addlinespace[2pt]
+ResNet-101 & 7,3 & 15 & 4,1 & 77,26 & 64,47 & 77,35 & 0,09 \\
+ResNet-101 & 18,7 & 20 & 5,4 & 77,26 & 41,26 & 77,39 & 0,13 \\
+ResNet-101 & 28,5 & 20 & 5,0 & 77,26 & 20,33 & 77,17 & $-$0,09 \\
+ResNet-101 & 42,9 & 40 & 9,3 & 77,26 & 8,17 & 77,06 & $-$0,20 \\
+ResNet-101 & 45,4 & 40 & 21,5 & 77,26 & 5,88 & 77,03 & $-$0,24 \\
+ResNet-101 & 57,6 & 60 & 31,5 & 77,26 & 0,56 & 76,69 & $-$0,57 \\
+ResNet-101 & 73,0 & 75 & 16,2 & 77,26 & 0,12 & 75,94 & $-$1,33 \\
+ResNet-101 & 87,8 & 75 & 27,4 & 77,26 & 0,14 & 72,69 & $-$4,57 \\
+ResNet-101 & 87,9 & 90 & 31,5 & 77,26 & 0,17 & 72,89 & $-$4,38 \\
+\addlinespace[2pt]
+ResNet-152 & 58,5 & 40 & 28,8 & 78,24 & 1,18 & 77,45 & $-$0,79 \\
+ResNet-152 & 81,2 & 75 & 43,4 & 78,24 & 0,15 & 76,25 & $-$1,99 \\
+\end{longtable}
+}
+
+\section{Répartitions des 8 accélérateurs}
+
+\begin{table}[H]
+\centering\small
+\caption[Les 22 répartitions de 8 accélérateurs]{Les 22 manières de répartir 8 accélérateurs entre instances, soit les 22 façons d'écrire 8 comme une somme d'entiers. La notation compacte regroupe les parts égales et est celle employée au chapitre~\ref{chap:resultats}.}
+\label{tab:ann_shapes}
+\begin{tabular}{@{}rll@{}}
+\toprule
+Instances & Profondeurs & Notation compacte \\
+\midrule
+1 & 8 & 8 \\
+\addlinespace[2pt]
+2 & 7 + 1 & 7$+$1 \\
+2 & 6 + 2 & 6$+$2 \\
+2 & 5 + 3 & 5$+$3 \\
+2 & 4 + 4 & 4$\times$2 \\
+\addlinespace[2pt]
+3 & 6 + 1 + 1 & 6$+$1$\times$2 \\
+3 & 5 + 2 + 1 & 5$+$2$+$1 \\
+3 & 4 + 3 + 1 & 4$+$3$+$1 \\
+3 & 4 + 2 + 2 & 4$+$2$\times$2 \\
+3 & 3 + 3 + 2 & 3$\times$2$+$2 \\
+\addlinespace[2pt]
+4 & 5 + 1 + 1 + 1 & 5$+$1$\times$3 \\
+4 & 4 + 2 + 1 + 1 & 4$+$2$+$1$\times$2 \\
+4 & 3 + 3 + 1 + 1 & 3$\times$2$+$1$\times$2 \\
+4 & 3 + 2 + 2 + 1 & 3$+$2$\times$2$+$1 \\
+4 & 2 + 2 + 2 + 2 & 2$\times$4 \\
+\addlinespace[2pt]
+5 & 4 + 1 + 1 + 1 + 1 & 4$+$1$\times$4 \\
+5 & 3 + 2 + 1 + 1 + 1 & 3$+$2$+$1$\times$3 \\
+5 & 2 + 2 + 2 + 1 + 1 & 2$\times$3$+$1$\times$2 \\
+\addlinespace[2pt]
+6 & 3 + 1 + 1 + 1 + 1 + 1 & 3$+$1$\times$5 \\
+6 & 2 + 2 + 1 + 1 + 1 + 1 & 2$\times$2$+$1$\times$4 \\
+\addlinespace[2pt]
+7 & 2 + 1 + 1 + 1 + 1 + 1 + 1 & 2$+$1$\times$6 \\
+\addlinespace[2pt]
+8 & 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 & 1$\times$8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+

@@ -1,0 +1,1235 @@
+% =====================================================================
+%  Rapport de stage - Stage M2 SESI
+%  IA embarquée efficiente en temps et en énergie pour Tensor Processing Units
+%  Auteur : Mouad Zouhdi
+%  Compilation : pdfLaTeX (compatible Overleaf)
+%
+%  RÉVISION EN COURS :
+%    - remerciements corrigés ;
+%    - temps harmonisés : passé pour les travaux menés et l'état de
+%      l'étude, présent conservé pour les faits permanents (matériel,
+%      définitions, littérature) et pour les résultats ;
+%    - chapitre 4 réordonné : plateformes et panels de modèles remontés
+%      avant la chaîne de conversion et le pruning, protocole
+%      d'entraînement passé en section autonome, compression placée
+%      avant la chaîne de conversion, métriques rejetées
+%      après les configurations multi-TPU. Plus aucun renvoi en avant
+%      à l'intérieur du chapitre.
+%    - nouveaux labels : sec:plateformes, sec:entrainement.
+%  Aucun point ouvert : les remerciements sont arrêtés et le graphe
+%  optionnel des perspectives a été abandonné, faute de retrouver les mesures.
+% =====================================================================
+\documentclass[11pt,a4paper]{report}
+
+% ---------- Encodage et langue ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french,provide=*]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{csquotes}
+
+\usepackage[
+  backend=biber,
+  sorting=none
+]{biblatex}
+\addbibresource{reference.bib}
+
+\AtEveryBibitem{%
+  \clearfield{urlyear}%
+  \clearfield{urlmonth}%
+  \clearfield{urlday}%
+  \clearfield{urldate}%
+}
+
+\usepackage{chngcntr}
+% Ne PAS retirer le chapitre de \thefigure : la classe report remet le compteur
+% a zero a chaque chapitre, si bien que retirer le prefixe sans retirer la
+% remise a zero produisait plusieurs « Figure 1 » dans le document et rendait
+% les renvois ambigus. Les figures suivent donc la meme numerotation que les
+% tables, qui sont deja en 5.1, 5.2, etc.
+
+% ---------- Mise en page ----------
+% >>> PARAMÈTRES AJUSTABLES : taille des marges <<<
+% \margehoriz : marges gauche et droite.
+% \margevert  : marges haut et bas.
+% Diminuer pour des marges plus étroites (ex. 2cm, 1.8cm),
+% augmenter pour des marges plus larges (ex. 3cm).
+\newcommand{\margehoriz}{2.5cm}
+\newcommand{\margevert}{2.5cm}
+\usepackage{geometry}
+\geometry{hmargin=\margehoriz, vmargin=\margevert}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+\setlength{\parindent}{1.2em}
+
+% ---------- Graphismes et couleurs ----------
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage[font=footnotesize]{caption}   % titres de figures et de tables un cran plus petits
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+% echelle des tables de benchmark en annexe
+\newcommand{\benchscale}{1.0}
+
+% ---------- Tableaux ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+
+% ---------- Liens ----------
+\usepackage[hidelinks]{hyperref}
+% Les URL longues de la bibliographie depassent sinon la justification.
+\usepackage{xurl}
+
+% ---------- En-têtes et pieds de page ----------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Rapport de stage}
+\fancyhead[R]{\small Mouad Zouhdi}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- Style des titres ----------
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+  {\normalfont\huge\bfseries}{\thechapter}{1em}{}
+
+% >>> MARGE SUPÉRIEURE DES CHAPITRES ET DE LA TABLE DES MATIÈRES <<<
+% \margehautchapitre : espace au-dessus du titre, sur la page de
+%                      début de chaque chapitre.
+% \margehauttdm      : espace au-dessus du titre de la table des
+%                      matières (réglable indépendamment des chapitres).
+% \espaceapreschapitre : espace SOUS le titre de chapitre, avant le
+%                        texte ou le premier titre de section.
+% Unités possibles : ex, pt, cm, em... Augmenter/diminuer librement.
+\newcommand{\margehautchapitre}{-1.5cm}
+\newcommand{\margehauttdm}{-1.5cm}
+\newcommand{\espaceapreschapitre}{0.5cm}
+
+% Espacement des chapitres : 2e arg = espace avant, 3e arg = espace après.
+\titlespacing*{\chapter}{0pt}{\margehautchapitre}{\espaceapreschapitre}
+
+% La table des matières est composée comme un chapitre étoilé.
+% On change donc localement l'espacement du chapitre le temps de
+% \tableofcontents, puis on le restaure pour les vrais chapitres.
+\let\origtableofcontents\tableofcontents
+\renewcommand{\tableofcontents}{%
+  \begingroup
+  \titlespacing*{\chapter}{0pt}{\margehauttdm}{\espaceapreschapitre}%
+  \origtableofcontents
+  \endgroup
+}
+
+% =====================================================================
+\begin{document}
+
+% =====================================================================
+%  PAGE DE GARDE
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+
+% ----- Emplacements pour les logos -----
+\begin{minipage}[t]{0.45\textwidth}
+  \centering
+    \includegraphics[width=4cm]{sorbonne.png}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+  \centering
+   \includegraphics[width=4cm]{laas.jpg}
+\end{minipage}
+
+\vspace{1.6cm}
+
+{\scshape\Large Sorbonne Université \par}
+\vspace{0.3em}
+{\scshape\large Master 2 SESI : Systèmes Électroniques et Systèmes Informatiques \par}
+
+\vspace{1.4cm}
+
+\rule{\linewidth}{0.5pt}
+\vspace{0.5cm}
+
+{\huge\bfseries IA embarquée efficiente en temps\\et en énergie pour Tensor Processing Units \par}
+
+\vspace{0.5cm}
+\rule{\linewidth}{0.5pt}
+
+\vspace{0.7cm}
+{\large\itshape Rapport de stage \par}
+
+\vspace{1.6cm}
+
+\begin{tabular}{r l}
+  \textbf{Stagiaire} & Mouad Zouhdi \\[0.5em]
+  \textbf{Encadrant de stage} & Dr Tomasz Kłoda, LAAS-CNRS \\[0.5em]
+  \textbf{Enseignant référent} & Franck Wajsburt, Sorbonne Université \\[0.5em]
+  \textbf{Période de stage} & 02/03/2026 au 02/09/2026 (6 mois) \\
+\end{tabular}
+
+\vspace{1.0cm}
+
+\vfill
+{\large Année universitaire 2025--2026 \par}
+
+\end{titlepage}
+
+\pagenumbering{roman}
+% Partie liminaire sans numéro de page : dédicace, remerciements et table des
+% matières. \pagestyle{empty} ne suffit pas, parce que \chapter*, dont relèvent
+% les remerciements et la table des matières, impose son propre
+% \thispagestyle{plain} sur sa première page. On neutralise donc le style
+% `plain` lui-même le temps de la partie liminaire, et on le restaure avant le
+% corps. Un \thispagestyle{empty} après \tableofcontents ne marcherait pas : il
+% s'appliquerait à sa dernière page, pas à la première.
+\pagestyle{empty}
+\makeatletter
+\let\psplainsauve\ps@plain
+\let\ps@plain\ps@empty
+\makeatother
+
+% =====================================================================
+%  REMERCIEMENTS
+% =====================================================================
+% Page de dédicace : ni numéro, ni en-tête, ni entrée dans la table des
+% matières. Le \null\vfill pousse la ligne en bas de page.
+\thispagestyle{empty}
+\null\vspace*{\dimexpr0.764\textheight-1.5cm\relax}
+\noindent\hspace*{\dimexpr0.25\textwidth-2cm\relax}{\itshape À mes parents\dots}
+\newpage
+
+\chapter*{Remerciements}
+% pas d entree dans la table des matieres : la partie liminaire n est pas
+% numerotee, un renvoi de page y serait sans objet.
+\thispagestyle{empty}
+
+Je tiens tout d'abord à exprimer ma sincère reconnaissance à mon encadrant, le Dr Tomasz Kłoda, pour la confiance qu'il m'a accordée en me confiant un sujet aussi ouvert, ainsi que pour sa disponibilité tout au long de ces 6 mois. Je lui suis particulièrement reconnaissant de la rigueur et de la bienveillance avec lesquelles il a suivi, relu et discuté chacun des résultats présentés ici. Je lui dois aussi de m'avoir encouragé à rédiger un article scientifique malgré mes doutes, puis de m'avoir donné l'occasion de le présenter en conférence en tant que premier auteur. Cette expérience m'a fait découvrir l'état de l'art d'une discipline qui me passionne et rencontrer des personnes dont les échanges compteront pour la suite de mon parcours ; son soutien a largement contribué à faire de ce stage une étape déterminante.
+
+Mes remerciements vont à l'ensemble de l'équipe TRUST du LAAS-CNRS, pour son accueil et pour la qualité des échanges scientifiques qui ont accompagné ce travail, ainsi qu'aux services techniques du laboratoire, dont l'infrastructure de calcul a rendu possible une campagne expérimentale de cette ampleur. Je remercie de même les co-auteurs de l'article auquel j'ai contribué, dont la collaboration a enrichi et étendu ces travaux au-delà de ce que j'aurais pu accomplir seul. J'ai aussi une pensée particulière pour les stagiaires de la salle A22, dont la bonne humeur a beaucoup fait pour rendre mon séjour à Toulouse agréable.
+
+Je souhaite exprimer ma reconnaissance à l'équipe pédagogique du master d'informatique, parcours Systèmes Électroniques et Systèmes Informatiques (SESI) à Sorbonne Université, pour la qualité de ses enseignements et pour l'accompagnement dont j'ai bénéficié tout au long de ma formation.
+
+Je remercie enfin ma famille, dont le soutien ne s'est jamais démenti tout au long de mes études, y compris dans les moments les plus difficiles.
+
+\newpage
+
+% La table des matières est en tête, avant la remise à zéro du compteur de
+% pages : elle relève de la partie liminaire et ne compte pas dans le corps.
+\tableofcontents
+
+\newpage
+
+% =====================================================================
+\pagenumbering{arabic}
+\pagestyle{fancy}
+\makeatletter
+\let\ps@plain\psplainsauve
+\makeatother
+
+% =====================================================================
+%  CHAPITRE 1 - INTRODUCTION
+% =====================================================================
+\chapter{Introduction}
+
+Un Tensor Processing Unit (TPU) est un accélérateur matériel développé par Google pour exécuter des réseaux de neurones de manière plus efficace qu'un CPU ou un GPU généraliste. Sa version d'origine, appelée Cloud TPU \cite{jouppiInDatacenterPerformanceAnalysis2017a}, est destinée aux datacenters et atteint des centaines de téra-opérations par seconde au prix d'une consommation de plusieurs centaines de watts. Le succès de cette architecture, couplé à l'essor de l'intelligence artificielle dans les systèmes embarqués, a conduit Google à proposer une déclinaison miniaturisée et basse consommation : l'Edge TPU \cite{USBAcceleratorDatasheet}, commercialisé sous la marque Coral. Cet accélérateur, représenté sur la figure~\ref{fig:edgetpu} sous les deux formes employées dans ce stage, cible des inférences temps-réel, principalement orientées vision, dans des plateformes embarquées de quelques watts.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[b]{0.38\linewidth}
+        \centering
+        \includegraphics[height=4.3cm,trim=70 0 150 85,clip]{tpu_usb.jpg}\\[3pt]
+        {\footnotesize (a) Coral USB Accelerator}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.58\linewidth}
+        \centering
+        \includegraphics[height=4.3cm]{asus.png}\\[3pt]
+        {\footnotesize (b) Carte ASUS CRL-G18U-P3DF}
+    \end{minipage}
+    \caption{Les deux supports employés dans ce stage, un Edge TPU au format USB pour l'axe mono-TPU et une carte PCIe qui en réunit 8 pour l'axe multi-TPU.}
+    \label{fig:edgetpu}
+\end{figure}
+
+Malgré cette miniaturisation, les réseaux de neurones restent gourmands en mémoire et en énergie, ce qui pose la question de savoir comment exploiter au mieux les ressources disponibles d'un Edge TPU. C'est cette question qui a motivé le présent stage.
+
+L'objectif était d'identifier les meilleurs compromis entre précision, latence et débit atteignables pour des réseaux de neurones exécutés sur Edge TPU, à travers deux axes complémentaires. Un axe mono-TPU, à orientation logicielle, a étudié l'effet de techniques de compression de modèles sur les performances. Un axe multi-TPU, à orientation matérielle, a étudié l'utilisation conjointe de plusieurs Edge TPU en pipeline ou en parallèle.
+
+La suite est organisée comme suit. Le chapitre~\ref{chap:contexte} introduit le contexte, l'organisme d'accueil, le fonctionnement de l'Edge TPU et les contraintes qui en découlent. Le chapitre~\ref{chap:objectifs} précise les objectifs scientifiques du stage, les deux leviers d'optimisation qui en structurent les axes, et les livrables produits. Le chapitre~\ref{chap:methodo} décrit la méthodologie expérimentale et le framework de mesure, en traitant conjointement les configurations mono-TPU et multi-TPU. Le chapitre~\ref{chap:resultats} donne les résultats expérimentaux, en commençant par la validation du dispositif de mesure lui-même. Suivent les perspectives au chapitre~\ref{chap:perspectives} et la conclusion au chapitre~\ref{chap:conclusion}.
+
+
+% =====================================================================
+%  CHAPITRE 2 - CONTEXTE
+% =====================================================================
+\chapter{Contexte}
+\label{chap:contexte}
+
+\section{Laboratoire d'accueil et cadre du stage}
+
+Le Laboratoire d'Analyse et d'Architecture des Systèmes (LAAS-CNRS) est une unité propre du Centre National de la Recherche Scientifique, située au 7 avenue du Colonel-Roche, 31031 Toulouse Cedex 4. Le laboratoire regroupe environ 700 personnes dans une vingtaine d'équipes de recherche, couvrant des domaines allant de la robotique à la micro-nanotechnologie. Les activités se caractérisent par une forte dimension expérimentale et une proximité avec l'industrie, notamment dans l'aéronautique, le spatial et les systèmes autonomes.
+
+Le stage s'est déroulé au sein de l'équipe TRUST (Trustworthy systems: foundations and practices), rattachée au département RISC (Réseaux, Informatique et Systèmes de Confiance). L'équipe TRUST s'intéresse aux méthodes et outils permettant de justifier la confiance placée dans un système informatique : vérification pré-déploiement, surveillance à l'exécution, intelligence artificielle digne de confiance et frugale.
+
+Le sujet s'inscrivait dans l'axe des systèmes embarqués temps-réel et des accélérateurs matériels pour l'IA. L'encadrant, Dr Tomasz Kłoda, travaille sur l'ordonnancement temps-réel de tâches d'inférence, en collaboration avec le LIRIS-CNRS à Lyon et la Technical University of Munich. La figure~\ref{fig:laas} montre l'entrée du laboratoire.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{LAAS.png}
+    \caption{Entrée du LAAS-CNRS}
+    \label{fig:laas}
+\end{figure}
+
+\section{Réseaux de neurones convolutifs en inférence}
+
+Un réseau de neurones profond est une fonction paramétrée par des millions de coefficients appelés poids. Cette fonction se compose d'une succession de couches : chaque couche reçoit un tenseur de données d'entrée, applique une transformation linéaire (typiquement une multiplication matricielle ou une convolution) puis une fonction non-linéaire, et produit un tenseur de sortie qui alimente la couche suivante. L'apprentissage consiste à ajuster les poids sur la base d'un jeu de données étiquetées de manière à minimiser une erreur de prédiction. Une fois entraîné, le réseau est utilisé en inférence : on lui présente une donnée nouvelle (par exemple une image), il la propage à travers ses couches et produit un résultat (par exemple une classe d'objet).
+
+L'inférence est l'opération que l'on cherche à accélérer dans les déploiements embarqués. À chaque exécution, le matériel doit récupérer les poids du modèle depuis la mémoire et effectuer la cascade d'opérations linéaires, qui se résument essentiellement à un très grand nombre de multiplications-accumulations. Ce sont précisément ces opérations qu'un TPU exécute en parallèle de manière optimisée.
+
+Dans le cadre du stage, on s'est intéressé aux réseaux de neurones convolutifs (CNN), une famille d'architectures bien adaptée au traitement d'images. Les CNN exploitent le partage de paramètres pour détecter des motifs locaux (bords, textures puis structures de plus haut niveau) et constituent l'usage cible privilégié de l'Edge TPU. La figure~\ref{fig:cnn} en donne le schéma de principe.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{conv.png}
+    \caption{Schéma simplifié d'un CNN}
+    \label{fig:cnn}
+\end{figure}
+
+\section{Architecture et exécution de l'Edge TPU}
+
+L'Edge TPU est optimisé pour le déploiement embarqué : sa puissance théorique est de 4 TOPS, sa mémoire interne est limitée à 8 Mio de SRAM, et sa consommation maximale est de l'ordre de 2 W.
+
+Cette miniaturisation s'accompagne de contraintes spécifiques. L'Edge TPU exécute uniquement des modèles quantifiés en INT8 (entiers signés sur 8 bits) et n'accélère qu'un sous-ensemble d'opérations : essentiellement les convolutions, les couches denses, les fonctions d'activation usuelles et certaines normalisations. Les opérations non supportées sont automatiquement repliées sur le processeur hôte par le compilateur Edge TPU, ce qui dégrade fortement les performances et limite de fait les architectures déployables.
+
+Le principe de fonctionnement hardware d'un Edge TPU repose sur un réseau systolique (systolic array) \cite{kungWhySystolicArchitectures1982}. Une architecture systolique est un ensemble d'éléments de traitement (processing elements ou PE) interconnectés de manière régulière, où les données circulent de manière rythmée d'un élément au suivant, chaque élément effectuant une opération élémentaire avant de transmettre la donnée. Le principe, représenté sur la figure~\ref{fig:systolic}, est analogue à celui du pipeline dans les processeurs classiques, où plusieurs étages de traitement fonctionnent en parallèle sur des données différentes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{systolic.png}
+    \caption{Principe d'une architecture systolique}
+    \label{fig:systolic}
+\end{figure}
+
+Dans le cas d'un réseau systolique destiné à la multiplication matricielle, ce principe est étendu à deux dimensions : les données circulent simultanément le long des lignes et des colonnes de la grille, ce qui permet d'atteindre un parallélisme très élevé avec un minimum d'accès mémoire. Les PE ici sont des unités de multiplication-accumulation (MAC) : chaque PE reçoit une donnée d'activation et un poids, les multiplie, ajoute le résultat à un accumulateur, et transmet la donnée à l'élément suivant.
+
+L'exécution suit un mode SIMD (Single Instruction, Multiple Data) : la même opération s'applique à plusieurs paires (activation, poids) en parallèle dans chaque PE, qui dispose de plusieurs voies de calcul (compute lanes) \cite{seshadriEvaluationEdgeTPU2022}. C'est ce parallélisme massif à très bas niveau qui explique le rendement énergétique supérieur de l'Edge TPU pour les charges qu'il sait exécuter.
+
+\section{Limites mémoire et performances}
+
+Sur tout processeur, l'étage qui gère les accès mémoire est habituellement critique, tant en latence (l'étage mémoire conditionne souvent la fréquence d'horloge) qu'en consommation (les accès mémoire dominent la dissipation dynamique). Pour un accélérateur dont la charge de travail consiste à parcourir des millions de paramètres à chaque inférence, ces deux aspects sont particulièrement exacerbés.
+
+Concrètement, lorsque le modèle dépasse la capacité de la SRAM interne de 8 Mio, les paramètres restants doivent être récupérés depuis la RAM hôte au fil de l'exécution. Ce phénomène, dit de streaming hors-puce (off-chip streaming), introduit un surcoût de latence significatif et fait souvent chuter les performances réelles bien en deçà des 4 TOPS théoriques.
+
+% =====================================================================
+%  CHAPITRE 3 - OBJECTIFS ET CONTRIBUTIONS
+% =====================================================================
+\chapter{Objectifs et contributions}
+\label{chap:objectifs}
+
+\section{Problématique}
+
+Le stage visait à caractériser, pour des réseaux de neurones exécutés sur Edge TPU, les meilleurs compromis atteignables sur le triplet (latence, précision, débit). Pour un modèle donné, optimiser l'exécution sur Edge TPU revient à trouver un point d'équilibre entre trois grandeurs simultanément en jeu : la latence d'inférence (temps entre la présentation d'une donnée et la production du résultat), la précision (qualité des prédictions, mesurée par le pourcentage de classifications correctes sur un jeu de test) et le débit (nombre d'inférences traitées par seconde). Cette dernière grandeur ne se distingue de la latence que dans les configurations multi-TPU, où plusieurs accélérateurs traitent des inférences en parallèle ou en pipeline. Ces grandeurs sont en conflit. Comprimer un modèle réduit généralement la latence, au prix d'une dégradation de la précision. Il n'existe pas, en général, de configuration unique optimale sur tous les plans, mais un ensemble de configurations correspondant à différents compromis.
+
+Ce compromis n'avait jamais été caractérisé sur cet accélérateur. La littérature de l'élagage structuré est abondante et compare ses critères entre eux sur des métriques logicielles, nombre de paramètres retirés ou nombre d'opérations économisées, c'est-à-dire sur des \emph{proxys} de la latence. Parallèlement, plusieurs travaux ont évalué les performances de l'Edge TPU \cite{seshadriEvaluationEdgeTPU2022,gaoWorkInProgressModeling2025,villarrubiaImprovingInferenceTime2023}, et établi que les transferts de poids depuis la mémoire hôte y dominent la latence. Mais à notre connaissance, aucun travail ne joint les deux : personne n'avait mesuré ce que ces critères d'élagage produisent réellement, en latence, sur un Edge TPU. Or rien ne garantit que le classement établi sur un proxy logiciel survive au passage sur un matériel dont la performance est gouvernée par un seuil de mémoire interne. C'est précisément ce point que l'étude visait à trancher par la mesure.
+
+\section{Leviers d'optimisation et axes d'étude}
+
+Le problème central est la mémoire. Deux familles de leviers complémentaires permettent de l'atténuer, et ont structuré les deux axes du stage.
+
+Le levier logiciel consiste à comprimer le modèle pour réduire son empreinte mémoire. Si la compression est trop agressive, la précision du modèle se dégrade : il y a donc un compromis à explorer entre cette empreinte, dont la latence dépend sans lui être proportionnelle, et la qualité des prédictions. L'axe mono-TPU du stage lui a été consacré : il a caractérisé l'effet de plusieurs méthodes de compression sur les performances d'un modèle exécuté sur un seul Edge TPU, l'enjeu étant d'identifier quelles méthodes sont les plus pertinentes selon l'architecture du réseau et le régime mémoire observé.
+
+Le levier matériel consiste à répartir le modèle sur plusieurs Edge TPU connectés en pipeline, chaque accélérateur ne gardant alors dans sa mémoire interne que les couches qu'il exécute. Les capacités s'additionnent, et un modèle trop volumineux pour un seul accélérateur peut ainsi tenir entièrement en mémoire interne. Ce même levier prend une seconde forme, l'emploi de plusieurs Edge TPU en parallèle, chacun traitant un échantillon différent. L'axe multi-TPU a étendu l'étude à ces topologies, ainsi qu'à leurs combinaisons. Chacune présente ses propres compromis entre latence, débit et capacité mémoire cumulée, et l'objet de cet axe était d'identifier les configurations dominantes selon le nombre d'accélérateurs disponibles.
+
+Les deux leviers ne sont pas indépendants : la topologie matérielle retenue fixe la mémoire interne disponible par instance du modèle, donc le taux de compression nécessaire, donc la précision atteignable. C'est ce couplage qui a justifié de les traiter dans une méthodologie expérimentale unique, décrite au chapitre~\ref{chap:methodo}, où le fonctionnement détaillé de chaque topologie est présenté en section~\ref{sec:multitpu}.
+
+\section{Livrables et retombées}
+
+L'apport principal de ce stage est un ensemble d'analyses comparatives permettant d'orienter le choix d'une configuration de déploiement sur Edge TPU, obtenu à partir d'un framework développé au cours du stage.
+
+\paragraph{Article de conférence.} La caractérisation de l'axe mono-TPU a fait l'objet d'un article, \emph{Pruning of Deep Neural Networks for Real-Time Execution on Edge TPU}, accepté à la conférence Digital System Design (DSD) et présenté à Cracovie le 2 septembre 2026.
+Cet article couvre l'intégralité de l'axe mono-TPU du présent rapport : la chaîne de déploiement décrite en section~\ref{sec:conversion}, le protocole expérimental des sections~\ref{sec:modeles} et~\ref{sec:entrainement} et les résultats de la section~\ref{sec:res_mono}, auxquels le lecteur est renvoyé. S'y ajoute une seconde partie, en aval de cette caractérisation, qui exploite les profils (précision, temps d'exécution) mesurés pour sélectionner les taux d'élagage d'un ensemble de tâches périodiques ordonnancées sur un unique TPU, sous contrainte de respect des échéances. Cette partie relève des travaux d'ordonnancement temps-réel de l'équipe et n'est pas détaillée dans ce rapport ; elle illustre en revanche l'usage direct auquel les mesures produites ici sont destinées. Ma contribution personnelle a porté sur la totalité de la partie caractérisation : le framework, la campagne de mesure et son analyse.
+
+\paragraph{Autres livrables.} S'y ajoutent : un framework de mesure automatisé couvrant la chaîne complète PyTorch $\rightarrow$ Edge TPU ; une campagne mono-TPU de 404 modèles élagués, sur une grille de 7 architectures, 7 critères d'importance et 9 taux d'élagage, entièrement caractérisés sur Edge TPU ; une campagne multi-TPU sur 8 architectures ImageNet-1k, 43 modèles mesurés dans les 22 manières de répartir les 8 accélérateurs de la carte ; et une étude complémentaire sur un corpus de 291 réseaux convolutifs synthétiques, servant d'une part à caractériser le comportement du pipeline en fonction de la résolution des entrées, d'autre part à identifier les sources d'interférence entre accélérateurs exécutés en parallèle.
+
+% =====================================================================
+%  CHAPITRE 4 - METHODOLOGIE
+% =====================================================================
+\chapter{Méthodologie et framework}
+\label{chap:methodo}
+
+\section{Architecture du framework}
+
+L'objectif méthodologique était de produire, pour chaque modèle exploré, l'ensemble des configurations correspondant aux meilleurs compromis dans l'espace exploré, et d'analyser les facteurs qui les déterminent. L'outil de présentation principal est le front de Pareto sur les axes (latence, précision, débit), détaillé en section~\ref{sec:metriques}. On verra au chapitre~\ref{chap:resultats} que ce front se réduit souvent à un unique point de fonctionnement par modèle dans le plan (latence, débit), la configuration la plus rapide par échantillon étant alors également celle de plus haut débit ; ce n'est cependant vrai que lorsque le nombre d'accélérateurs nécessaires au modèle divise 8, et un arbitrage réapparaît sinon. L'identification de ces compromis dominants présentait par ailleurs un intérêt direct pour les travaux d'ordonnancement temps-réel menés par l'encadrant : connaître, pour chaque modèle, le jeu des configurations Pareto-optimales fournit un espace de choix qualifié dans lequel un ordonnanceur peut sélectionner le point de fonctionnement adapté à ses contraintes.
+
+Le framework prend en entrée un modèle PyTorch et produit en sortie un ensemble de configurations comprimées caractérisées sur Edge TPU. Il a été conçu pour traiter de manière unifiée les configurations mono-TPU et les configurations multi-TPU, la topologie matérielle étant traitée comme une variable additionnelle des configurations explorées.
+
+La suite du chapitre suit l'ordre dans lequel une configuration traverse ce framework. La section~\ref{sec:plateformes} décrit les plateformes matérielles sur lesquelles les mesures ont été relevées, et la section~\ref{sec:modeles} les deux panels de modèles et les jeux de données auxquels ils sont associés. La section~\ref{sec:pruning} décrit les méthodes de compression appliquées aux modèles, la section~\ref{sec:conversion} la chaîne de déploiement qui mène du modèle élagué au binaire exécutable sur l'accélérateur, et la section~\ref{sec:entrainement} le protocole d'entraînement et de récupération qui accompagne l'élagage. La section~\ref{sec:multitpu} décrit les manières d'employer plusieurs accélérateurs, la section~\ref{sec:metriques} les grandeurs mesurées et les représentations qui en ont été tirées, et la section~\ref{sec:conditions} le volume de calcul que l'ensemble a représenté.
+
+\section{Plateformes matérielles}
+\label{sec:plateformes}
+
+Deux plateformes de mesure ont été utilisées, une par axe.
+
+La première, dédiée à l'axe mono-TPU, est un Edge TPU au format USB (Coral USB Accelerator) connecté à une Raspberry Pi 4 Model B (ARM Cortex-A72) sous Raspberry Pi OS Lite. Cette plateforme est représentative d'un déploiement embarqué économique, et c'est le CPU de cette même carte qui sert de point de comparaison à toutes les mesures d'accélération rapportées au chapitre~\ref{chap:resultats}.
+
+La seconde, dédiée à l'axe multi-TPU, est une carte PCIe CRL-G18U-P3DF \cite{AIAcceleratorPCIea} intégrant 8 Edge TPU sur un bus PCIe partagé, soit 64 Mio de mémoire interne cumulés. Ce sont ces 8 accélérateurs que les configurations décrites en section~\ref{sec:multitpu} répartissent, et le partage du bus entre eux est la principale source d'interférence à contrôler.
+
+Ces deux plateformes ne servent qu'à l'inférence. Les entraînements et les phases de récupération ont été menés sur le cluster de calcul du LAAS, dont la configuration et le coût sont décrits en section~\ref{sec:conditions}.
+
+\section{Panels de modèles et jeux de données}
+\label{sec:modeles}
+
+Chaque axe repose sur un panel de modèles et un jeu de données qui lui sont propres. Dans les deux cas, c'est le jeu de données qui a été fixé en premier et le panel d'architectures qui en découle.
+
+\subsection{Modèles mono-TPU sur CIFAR-100}
+
+Le jeu de données de l'axe mono-TPU est CIFAR-100 \cite{krizhevskyLearningMultipleLayers2009}, ensemble de 60 000 images de $32 \times 32$ pixels en RGB réparties en 100 classes, dont 50 000 pour l'entraînement et 10 000 pour le test. Deux raisons ont présidé à ce choix. La première est le coût : bien qu'éloigné d'un cas industriel, CIFAR-100 est suffisamment petit pour permettre l'exploration d'un grand nombre de configurations en un temps raisonnable, ce que la comparaison systématique de 7 critères d'importance exigeait. La seconde est la comparabilité : CIFAR-100 est la référence de la littérature du pruning structuré, la grande majorité des travaux du domaine y reportant leurs résultats, ce qui permet de situer les nôtres par rapport à l'état de l'art.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{cifar100.png}
+    \caption{Exemples d'images du dataset CIFAR-100 avec leurs étiquettes de classe}
+    \label{fig:cifar100}
+\end{figure}
+
+Le choix des architectures découle de celui du jeu de données : les 7 retenues sont celles que cette même littérature emploie, ce qui préserve la comparabilité avec les travaux existants. Elles couvrent par ailleurs un éventail représentatif d'architectures déployables sur Edge TPU :
+
+\begin{itemize}
+  \item ResNet-18 (11 M paramètres) et ResNet-50 (24 M paramètres). Architectures à connexions résiduelles, références incontournables en classification d'images.
+  \item VGG-19 (20 M paramètres). Architecture monolithique sans skip connections, représentative des designs anciens dominés par les couches convolutives empilées.
+  \item WRN-28-10 (37 M paramètres). Wide Residual Network, version élargie des ResNet, choisi pour tester un régime fortement contraint en mémoire.
+  \item MobileNetV2 (2,4 M paramètres). Architecture conçue pour le mobile à l'aide de convolutions séparables en profondeur, représentative des designs compacts.
+  \item GoogLeNet (5,7 M paramètres). Architecture à branches parallèles (modules Inception), représentative de topologies non linéaires.
+  \item SqueezeNet 1.1 (0,8 M paramètres). Architecture très compacte, choisie comme cas limite pour les très petits modèles sans BatchNorm.
+\end{itemize}
+
+Ces architectures sont employées dans leurs variantes adaptées à la petite taille des images de CIFAR-100. Conçues à l'origine pour des images bien plus grandes, elles en réduisent les dimensions dès les premières couches, ce qui ne laisserait presque rien à traiter à partir d'une entrée de $32 \times 32$ pixels ; leurs premiers étages ont donc été ajustés, adaptation standard du domaine.
+
+\subsection{Modèles multi-TPU sur ImageNet-1k}
+
+L'axe multi-TPU a changé de jeu de données comme de panel. Le jeu retenu est ImageNet-1k \cite{dengImageNetLargeScaleHierarchical2009}, ensemble de 1,28 million d'images d'entraînement réparties en 1000 classes, avec un ensemble de validation de 50 000 images, dont la figure~\ref{fig:imagenet} donne quelques exemples.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{imagenet.png}
+    \caption{Exemples d'images du jeu de données ImageNet-1k. À comparer aux images de $32 \times 32$ pixels de la figure~\ref{fig:cifar100} : c'est ce changement d'échelle qui rend la capacité des modèles réellement sollicitée, et donc le coût de la compression mesurable.}
+    \label{fig:imagenet}
+\end{figure}
+
+Ce basculement tient à la différence d'objectif entre les deux axes. Le premier compare des critères d'élagage entre eux, et c'est leur classement relatif qui porte la conclusion, davantage que la valeur absolue de la précision. Le second pose une tout autre question, celle de la répartition des accélérateurs, et ne mobilise qu'un critère unique : la précision n'y intervient plus que comme une valeur par configuration, mise en regard du gain de performance obtenu, sans autre lecture pour la corroborer. Elle doit donc être de bonne qualité en elle-même, ce que CIFAR-100 ne permet pas : sa faible résolution et son faible nombre de classes rendent les modèles fortement sur-paramétrés pour la tâche, si bien qu'un élagage même sévère y dégrade peu la précision. Il fallait un jeu de données où la capacité du modèle est réellement sollicitée pour que le prix de la compression devienne mesurable, ce qui permet du même coup de confronter les conclusions de l'axe mono-TPU à un régime où l'élagage coûte.
+
+Le prix à payer est le coût de calcul : une époque d'entraînement passe d'environ 40 secondes sur CIFAR-100 à 20 minutes à 2 heures sur ImageNet-1k selon l'architecture et la résolution, soit un facteur 30 à 180. Cette différence explique que l'axe mono-TPU explore une grille complète de critères et de taux, tandis que le second se restreint à un critère unique et à quelques taux ciblés.
+
+Le panel a changé pour deux raisons. La première est une nécessité de taille : la question du partitionnement sur plusieurs accélérateurs ne se pose que pour des modèles suffisamment gros pour justifier de cumuler leurs mémoires internes, or le panel CIFAR-100 se concentre dans le bas de cette échelle, son plus gros modèle occupant 35 Mio quand 8 accélérateurs en cumulent 64. La seconde tient au choix de ces 8 architectures en particulier : ce sont celles retenues par des travaux d'ordonnancement sur Edge TPU pipelinés menés par l'encadrant du stage et un doctorant \cite{sunSAParSurrogateAssisted2025}, et reprendre leur panel rend les mesures produites ici directement exploitables par ces travaux.
+
+Les 8 architectures sont employées dans leur résolution native ($224 \times 224$ ou $299 \times 299$ pixels) et à partir de poids ImageNet-1k pré-entraînés publics. Leurs tailles après quantification INT8 sont données ci-dessous : ce sont celles des fichiers TFLite produits par la chaîne de conversion décrite en section~\ref{sec:conversion}, exprimées en mébioctets, de manière à être directement comparables au plafond de 8 Mio de la mémoire interne et aux volumes que rapporte le compilateur Edge TPU, qui emploie la même unité.
+
+\begin{itemize}
+  \item GoogLeNet (6,57 Mio), BN-Inception (11,08 Mio), Inception-V3 (23,24 Mio) et Inception-V4 (41,60 Mio). Quatre générations successives de la famille Inception, construite sur des modules à branches parallèles.
+  \item Inception-ResNet-V2 (55,36 Mio). Hybride combinant les branches parallèles de la famille Inception et les connexions résiduelles.
+  \item ResNet-50 (25,09 Mio), ResNet-101 (43,88 Mio) et ResNet-152 (59,39 Mio). Trois profondeurs croissantes de la famille résiduelle.
+\end{itemize}
+
+Le panel couvre donc un rapport de 9 entre le plus petit et le plus gros modèle, et seul GoogLeNet approche les 8 Mio d'un unique Edge TPU, sans toutefois y tenir tout à fait, comme le montrera le chapitre~\ref{chap:resultats}. Les deux familles sont représentées à taille comparable (ResNet-101 et Inception-V4 d'une part, ResNet-152 et Inception-ResNet-V2 d'autre part), ce qui permet de comparer résiduels et branches parallèles à nombre de paramètres apparié.
+
+\subsection{Protocoles d'évaluation de la précision}
+
+Sur l'axe mono-TPU, la précision INT8 a été mesurée sur l'intégralité des 10 000 images de test de CIFAR-100, dont la taille modeste rend l'évaluation complète sur accélérateur abordable pour les 404 configurations du panel.
+
+Sur l'axe multi-TPU, deux protocoles coexistent. La précision en flottant a été mesurée sur les 50 000 images de validation à chaque époque de récupération, ce qui sert de signal de suivi de l'entraînement. La précision INT8 effectivement obtenue sur l'accélérateur a été mesurée séparément sur un sous-ensemble de 5000 images de validation, l'évaluation complète sur Edge TPU étant prohibitive en temps sur les configurations comparées. Ce sous-ensemble est le même pour toutes les configurations, tiré une fois pour toutes, ce qui rend les précisions de l'axe multi-TPU directement comparables entre elles ; les écarts inférieurs à quelques dixièmes de point y restent néanmoins à la limite de ce que 5000 images permettent de trancher. Seule cette seconde mesure décrit ce que fait le modèle déployé ; les deux séries de chiffres ne sont pas directement comparables et sont présentées comme telles au chapitre~\ref{chap:resultats}.
+
+
+
+\section{Méthodes de compression et de pruning}
+\label{sec:pruning}
+
+Deux méthodes de compression ont été utilisées, l'une obligatoire et l'autre facultative.
+
+La quantification est l'opération qui réduit la précision numérique des poids et activations d'un format flottant 32 bits vers un format entier de plus faible largeur. Sur Edge TPU, la quantification INT8 est obligatoire : le matériel ne sait pas exécuter des modèles flottants. Elle consiste, brièvement, à observer la distribution des activations sur un petit échantillon représentatif des données (calibration), à en déduire des facteurs d'échelle par tenseur, puis à arrondir les poids et les activations à des entiers signés sur 8 bits. La dégradation de précision induite par cette opération est généralement faible (de l'ordre de 1 à 3 points de pourcentage de précision Top-1 sur un dataset comme CIFAR-100), au bénéfice d'une division par 4 de la taille mémoire des paramètres.
+
+Le pruning structuré est la méthode centrale de l'étude. Il consiste à supprimer définitivement des groupes entiers de paramètres dans le réseau (canaux entiers d'une convolution, neurones d'une couche dense) jugés peu importants. Contrairement au pruning non structuré, qui se contente d'annuler des poids individuels (et reste sans effet sur la latence côté Edge TPU, qui ne sait pas exploiter cette sparsité), le pruning structuré réduit physiquement la taille du modèle et donc le nombre d'opérations à exécuter et la mémoire à transférer.
+
+La principale difficulté pratique du pruning structuré est le suivi des dépendances : supprimer un filtre dans une couche convolutive implique de propager la suppression sur toutes les couches connectées. Cette tâche a été confiée à la bibliothèque torch\_pruning, qui implémente un algorithme de Dependency Graph \cite{fangDepGraphAnyStructural2023} automatisant ces propagations. La figure~\ref{fig:depgraph} donne les types de dépendances qu'il doit résoudre.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{dependence.png}
+    \caption{Types de dépendances dans les architectures CNN conventionnelles}
+    \label{fig:depgraph}
+\end{figure}
+
+Une fois la machinerie de pruning structuré disponible, la question centrale est : quels filtres supprimer ? On choisit en pratique un score d'importance, on classe les filtres par score, et on supprime ceux du bas. La littérature propose de nombreux scores d'importance ; en suivant le panorama dressé par le survey de He et Xiao \cite{heStructuredPruningDeep2024} sur le pruning structuré des réseaux convolutifs profonds, on en distingue traditionnellement deux familles selon la nature des informations qu'ils consomment.
+
+\paragraph{Critères data-free.} Ils n'utilisent que les poids appris du modèle pour estimer l'importance, sans recours aux données d'apprentissage. Ils sont les moins coûteux à évaluer, puisqu'aucune passe d'inférence n'est nécessaire. Les critères retenus sont les suivants :
+
+\begin{itemize}
+  \item \textbf{Magnitude L1} : norme L1 des poids du filtre. L'hypothèse sous-jacente, la plus ancienne du domaine, est qu'un filtre de faible amplitude contribue peu à la sortie et peut être retiré sans dommage.
+  \item \textbf{Magnitude L2} : même hypothèse, avec une norme euclidienne, qui pénalise davantage les poids isolés de forte amplitude qu'une distribution uniforme de même somme.
+  \item \textbf{FPGM} (Filter Pruning via Geometric Median) : plutôt que de supprimer les filtres de faible norme, ce critère supprime les filtres les plus proches de la médiane géométrique des filtres de leur couche, c'est-à-dire les plus redondants. Un filtre de forte norme mais quasi identique à ses voisins est donc éliminé, ce que les critères de magnitude conservent.
+  \item \textbf{Random} : sélection aléatoire des filtres. Ce n'est pas une méthode mais la référence de contrôle indispensable : tout critère qui ne bat pas significativement le hasard après récupération n'apporte rien.
+\end{itemize}
+
+\paragraph{Critères data-driven.} Ils exploitent les données d'entraînement, sous des formes qui n'ont pas le même effet et qu'il faut donc distinguer d'emblée. Cette dépendance prend en effet deux visages, dont on verra au chapitre~\ref{chap:resultats} qu'ils ne se valent pas. Les deux premiers critères l'exercent au moment de l'élagage, par des passes avant et arrière sur un lot de calibration avant chaque étape ; le troisième la reporte entièrement en amont, dans une phase d'entraînement préalable, et n'exploite ensuite que les poids du modèle. Les critères retenus sont les suivants :
+
+\begin{itemize}
+  \item \textbf{Taylor} : produit du poids par son gradient, qui constitue une approximation au premier ordre de la variation de la fonction de coût induite par la mise à zéro du filtre. Ce critère estime donc directement ce que l'on cherche à minimiser, au lieu de s'appuyer sur un indicateur indirect comme la norme.
+  \item \textbf{OBD-C} : approximation au second ordre de la même variation. Le calcul de la hessienne complète étant hors de portée, OBD-C l'approche par une matrice d'information de Fisher factorisée par couche, ce qui est plus fidèle que l'approximation diagonale classique d'Optimal Brain Damage. Plus informé que Taylor en théorie, mais nettement plus fragile en pratique : son implémentation échoue sur les convolutions séparables en profondeur de MobileNetV2, sur les modules Fire de SqueezeNet et sur VGG-19.
+  \item \textbf{BN-Scale} : amplitude des paramètres $\gamma$ de la couche de normalisation par lot qui suit la convolution. Comme $\gamma$ multiplie directement le canal de sortie, un $\gamma$ proche de zéro annule le canal. Sa dépendance aux données ne vient pas d'une estimation par gradient au moment de l'élagage, mais d'une phase préalable d'apprentissage de la parcimonie, où une régularisation L1 sur les $\gamma$ pousse ceux des canaux inutiles vers zéro et rend le classement discriminant ; cette phase coûte un entraînement complet supplémentaire par modèle. C'est donc le critère le plus coûteux du panel, mais son coût est payé en amont et non à chaque étape d'élagage. Il est inapplicable à SqueezeNet, qui ne comporte pas de normalisation par lot.
+\end{itemize}
+
+Sept critères ont donc été évalués au total sur les 7 architectures de l'axe mono-TPU, et le produit cartésien complet compte $7 \times 7 \times 9 = 441$ configurations. Il en manque 37, pour deux raisons distinctes. Parmi elles, 36 sont des incompatibilités structurelles, systématiques sur les 9 taux d'élagage : BN-Scale est indisponible sur SqueezeNet (9 configurations) et OBD-C sur VGG-19, MobileNetV2 et SqueezeNet (27 configurations). La trente-septième est un échec isolé et d'une autre nature : la configuration WRN-28-10 $\times$ BN-Scale à 20~\% a bien été élaguée et récupérée, mais a échoué à la quantification INT8 de la chaîne décrite en section~\ref{sec:conversion}, le quantificateur ne parvenant pas à retrouver les tenseurs du sous-graphe converti. Faute de temps de calcul, elle n'a pas été rejouée. Les classements présentés au chapitre~\ref{chap:resultats} sont normalisés en conséquence, de manière à ce qu'une indisponibilité ne fausse pas le rang des critères disponibles.
+
+\paragraph{Restriction pour l'axe multi-TPU.} La comparaison des 7 critères n'a été menée que sur l'axe mono-TPU. L'axe multi-TPU n'a mobilisé qu'un seul critère, Taylor, retenu parmi les mieux classés de la campagne mono-TPU. Ce choix a été imposé par le coût d'une configuration, sans commune mesure entre les deux axes, ce que détaille la section~\ref{sec:conditions} : y répliquer la grille complète des critères était hors d'atteinte. La portée qu'en perdent les conclusions comparatives est discutée au chapitre~\ref{chap:perspectives}.
+
+\section{Conversion et déploiement des modèles}
+\label{sec:conversion}
+
+L'élagage décrit ci-dessus opère sous PyTorch, alors que l'Edge TPU n'exécute que des modèles TFLite quantifiés en INT8. Faire passer les modèles de l'un à l'autre a constitué la principale difficulté d'ingénierie du stage.
+
+La chaîne complète de déploiement comprend les étapes suivantes : entraînement PyTorch, export ONNX, conversion TFLite float32, quantification INT8, puis compilation Edge TPU. La bibliothèque torch\_pruning n'existe qu'en PyTorch. L'Edge TPU n'accepte en revanche que des modèles TFLite issus de TensorFlow. Les deux frameworks décrivent les graphes de calcul de manière différente et ne supportent pas exactement les mêmes opérations, ce qui rend la conversion non triviale. La solution adoptée s'appuie sur le format intermédiaire ONNX : le modèle élagué en PyTorch est exporté en ONNX, converti en TensorFlow par les outils onnx2tf, quantifié par ai-edge-quantizer puis compilé pour l'Edge TPU. La figure~\ref{fig:chaine} résume cet enchaînement et l'outil responsable de chaque transition.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance = 12mm,
+  etape/.style  = {draw, rounded corners=2pt, align=center,
+                   text width=62mm, inner sep=4pt, font=\small},
+  fleche/.style = {-latex, thick},
+  outil/.style  = {font=\footnotesize\ttfamily, midway, fill=white, inner sep=1.5pt}
+]
+\node[etape] (a) {\textbf{PyTorch (FP32)}\\[1pt]\footnotesize Modèle de référence entraîné};
+\node[etape, below=of a] (b) {\textbf{Modèle élagué (FP32)}\\[1pt]\footnotesize Suppression de canaux, puis récupération};
+\node[etape, below=of b] (c) {\textbf{ONNX (FP32)}\\[1pt]\footnotesize Graphe intermédiaire interopérable};
+\node[etape, below=of c] (d) {\textbf{TFLite (FP32)}\\[1pt]\footnotesize Graphe TensorFlow Lite};
+\node[etape, below=of d] (e) {\textbf{TFLite (INT8)}\\[1pt]\footnotesize Quantification après entraînement};
+\node[etape, below=of e] (f) {\textbf{Modèle Edge TPU (INT8)}\\[1pt]\footnotesize Instructions propres à l'accélérateur};
+\draw[fleche] (a) -- node[outil] {torch\_pruning}      (b);
+\draw[fleche] (b) -- node[outil] {torch.onnx.export}   (c);
+\draw[fleche] (c) -- node[outil] {onnx2tf}             (d);
+\draw[fleche] (d) -- node[outil] {ai-edge-quantizer}   (e);
+\draw[fleche] (e) -- node[outil] {edgetpu\_compiler}   (f);
+\end{tikzpicture}
+\caption[Chaîne de déploiement PyTorch vers Edge TPU]{Chaîne de déploiement complète, du modèle PyTorch entraîné au modèle exécutable sur Edge TPU. L'outil responsable de chaque transition est indiqué sur la flèche correspondante.}
+\label{fig:chaine}
+\end{figure}
+
+Deux correctifs ont dû être appliqués aux bibliothèques amont pour que les panels de la section~\ref{sec:modeles} traversent la chaîne au complet : un correctif de la conversion de l'opérateur de remplissage dans onnx2tf et un correctif de la validation des rangs de tenseurs dans ai-edge-quantizer, sans lesquels GoogLeNet et SqueezeNet, présents l'un et l'autre dans le panel de l'axe mono-TPU, sont rejetés par le compilateur Edge TPU. Par ailleurs, le compilateur ne segmente correctement que les fichiers TFLite issus de certains chemins de conversion : les modèles produits par le convertisseur TensorFlow natif provoquent une faute de segmentation du compilateur dès que l'on demande plus d'un segment, alors que les mêmes modèles produits via le chemin ONNX se compilent normalement. Ce point a conditionné toute la campagne multi-TPU.
+
+Il faut en tirer une réserve sur la portée du framework. La chaîne repose sur un empilement d'outils en évolution rapide, dont plusieurs sont ici employés en dehors du cadre pour lequel ils sont maintenus, et dont l'assemblage n'est stable que pour un jeu de versions donné : les correctifs décrits ci-dessus visent l'état actuel de ces bibliothèques et n'ont aucune raison de rester valables sur leurs versions ultérieures, où ils pourront aussi bien devenir inutiles que cesser de s'appliquer. Le framework ne garantit donc pas de convertir une architecture arbitraire : la garantie ne porte que sur les modèles effectivement convertis pour cette étude, dont chacun a été validé individuellement. Toute architecture nouvelle doit être considérée comme non supportée tant qu'elle n'a pas traversé la chaîne complète et passé les contrôles de la section~\ref{sec:validation}. Cette contrainte a d'ailleurs pesé sur la constitution des deux panels décrits plus haut, plusieurs candidats ayant dû être écartés faute de traverser la chaîne.
+
+\section{Protocole d'entraînement et de récupération}
+\label{sec:entrainement}
+
+Les réglages d'entraînement n'agissent pas indépendamment les uns des autres, et une mauvaise configuration conduit à des modèles non convergés ou sur-appris, deux situations qui invalident les comparaisons ultérieures. Comme chaque essai coûte un entraînement complet, les explorer était hors de portée. L'axe mono-TPU a donc repris telle quelle la recette du papier PruningBench \cite{liComprehensiveStudyStructural2025}, protocole uniforme appliqué à un large panel de méthodes de pruning sur classification CIFAR : taux d'apprentissage et sa planification, taille des lots, nombre d'époques, optimiseur et coefficient de régularisation en sont issus sans modification. Cette uniformité présente deux avantages : elle isole la variable d'intérêt, le choix du critère d'importance, en figeant toutes les autres, et elle permet de positionner les résultats du stage par rapport au leaderboard publié de PruningBench.
+
+Le protocole s'est déroulé en trois temps. Chaque modèle de référence a d'abord été entraîné depuis zéro pendant 200 époques. Il a ensuite été élagué progressivement, en de nombreuses étapes successives plutôt qu'en une seule fois, ce qui laisse le réseau s'ajuster au fur et à mesure ; la sélection des filtres à retirer a été faite sur l'ensemble du réseau plutôt que couche par couche, de sorte que l'algorithme répartit lui-même l'élagage entre les couches, et une même couche ne pouvait jamais être vidée au-delà de 90 \% de ses paramètres, faute de quoi le réseau serait coupé en deux. Est venue enfin une phase de récupération de 100 époques, qui reprend les réglages de l'entraînement initial avec un taux d'apprentissage 10 fois plus faible : il ne s'agit plus d'apprendre la tâche, mais de réparer ce que l'élagage a détruit.
+
+Un écart au protocole PruningBench mérite d'être signalé, car il conditionne la comparabilité des résultats. PruningBench définit sa cible d'élagage comme un pourcentage de réduction du nombre d'opérations de multiplication-accumulation ; elle a été définie ici comme un pourcentage de paramètres retirés. Ce choix est dicté par l'objet de l'étude : sur Edge TPU, c'est l'empreinte mémoire, donc le nombre de paramètres, qui détermine si le modèle tient en SRAM et donc la latence. Les tableaux chiffrés ne sont en conséquence pas directement superposables à ceux de PruningBench, et le classement de certains critères peut se déplacer entre les deux formulations, puisque certains critères élaguent préférentiellement des paramètres à fort coût de calcul unitaire. Les tendances qualitatives restent transférables.
+
+\paragraph{Protocole multi-TPU.} La recette PruningBench n'était pas transposable à ImageNet-1k : elle suppose un entraînement de référence depuis zéro, dont le coût aurait été ici de plusieurs milliers d'heures de calcul. L'axe multi-TPU est donc parti de poids pré-entraînés publics, déjà disponibles pour ces architectures, et s'est limité à la phase de récupération, pour laquelle il a repris les réglages usuels de la littérature de l'élagage sur ImageNet. L'algorithme d'élagage est celui de l'axe mono-TPU, avec le seul critère Taylor, et une seule différence : le plafond par couche a été relevé de 90 à 95 \%, sans quoi les taux les plus sévères étaient hors d'atteinte.
+
+Ces réglages sont identiques d'un modèle à l'autre. Le seul degré de liberté est le budget de récupération, c'est-à-dire le nombre d'époques, fixé en fonction du taux d'élagage effectivement atteint : de 15 époques en dessous de 10 \% de paramètres retirés à 90 au-delà de 85 \%. Ce couplage est nécessaire et non arbitraire : un modèle élagué à 90 \% voit sa précision retomber au niveau du hasard immédiatement après l'élagage et demande un budget de récupération sans commune mesure avec un modèle élagué à 25 \%, qui conserve l'essentiel de sa précision. Attribuer le même budget aux deux aurait introduit un biais systématique en faveur des taux faibles.
+
+Ce point a d'ailleurs fait l'objet d'un correctif en cours de campagne. Le budget était initialement décidé à partir du taux d'élagage \emph{prédit} par un modèle de premier ordre assimilant un paramètre à un octet ; or ce modèle sous-estime systématiquement l'occupation réelle de la SRAM, qui inclut les activations intermédiaires et les grandeurs internes des couches de normalisation, et l'élagage réellement nécessaire s'est révélé plus profond de 6 à 35 points selon le modèle. Le budget a donc été décidé, dans la suite de la campagne, après l'élagage, à partir du taux effectivement atteint.
+
+\section{Configurations multi-TPU}
+\label{sec:multitpu}
+
+Lorsque plusieurs Edge TPU sont disponibles sur une même plateforme, il n'existe que deux leviers élémentaires pour les employer, dont toutes les configurations réalisables sont des combinaisons.
+
+\subsection{Pipeline}
+
+Le modèle est partitionné le long de ses couches \cite{villarrubiaImprovingInferenceTime2023} : chaque TPU exécute une portion contiguë du réseau et transmet son activation de sortie au TPU suivant. L'intérêt décisif de ce levier est que les SRAM des TPU s'additionnent : un modèle trop gros pour un seul accélérateur, et donc condamné au streaming hors-puce, peut tenir entièrement en mémoire interne une fois réparti sur plusieurs. Son inconvénient est double. D'une part la latence d'une inférence individuelle augmente, puisque l'échantillon doit traverser tous les étages et franchir autant de frontières de partition. D'autre part la carte n'offre aucun lien direct de TPU à TPU : le transfert de l'activation d'un étage vers le suivant transite par la RAM hôte via le bus PCIe, et chaque frontière de partition a donc un coût propre, mesuré dans nos expériences entre 0,2 et 2,8 ms par segment selon le volume de l'activation transmise. Le débit, en revanche, augmente : les étages travaillent simultanément sur des échantillons différents.
+
+Le partitionnement opère à la granularité de la couche entière : la SRAM d'un Edge TPU ne peut accueillir que des couches complètes, et non une fraction de couche. Une portion de pipeline est donc un bloc de couches consécutives, et la coupure ne peut tomber qu'à une frontière de couche. Cette contrainte rend le partitionnement des architectures non séquentielles non trivial : un module Inception de GoogLeNet ou un bloc résiduel de ResNet n'est pas une simple pile linéaire de couches. Le découpage a été entièrement délégué au compilateur Edge TPU, qui décide seul du placement des coupures ; la seule prise dont on disposait est le nombre de segments demandés. Les limites que cette délégation impose sont discutées au chapitre~\ref{chap:perspectives}.
+
+\subsection{Parallélisme}
+
+Chaque TPU exécute des inférences indépendantes sur des échantillons différents. La latence individuelle est strictement inchangée, et le débit cumulé croît proportionnellement au nombre d'accélérateurs. Ce levier ne présente donc aucun inconvénient intrinsèque, mais il ne résout pas le problème de la mémoire : chaque copie doit tenir seule dans les 8 Mio d'un TPU, sans quoi chacune paie le streaming hors-puce. Il reste la question des interférences sur le bus PCIe partagé entre les 8 accélérateurs, que la campagne quantifie explicitement.
+
+\subsection{Configurations hybrides}
+
+À 8 accélérateurs disponibles, les deux leviers se composent. Une répartition consiste à découper les 8 accélérateurs en instances, chacune exécutant le modèle sur autant d'étages qu'elle compte d'accélérateurs ; il en existe exactement 22, autant que de façons d'écrire 8 comme une somme d'entiers. Quatre d'entre elles sont homogènes, toutes leurs instances ayant la même profondeur, et ce sont les seules disponibles lorsque le nombre d'accélérateurs nécessaires à une instance divise 8 : 8 copies indépendantes, 4 pipelines de 2, 2 pipelines de 4, ou un unique pipeline de 8. La figure~\ref{fig:configs} les représente.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=1.05cm, y=1.25cm,
+  tpu/.style  = {draw, fill=black!8, minimum width=0.62cm, minimum height=0.44cm,
+                 inner sep=0pt, font=\tiny},
+  grp/.style  = {draw, thick, rounded corners=2pt},
+  flx/.style  = {-latex, gray, shorten >=1pt, shorten <=1pt},
+  lgd/.style  = {font=\footnotesize, anchor=west}
+]
+% --- ligne 1 : 8 instances de 1 TPU ---
+\foreach \i in {0,...,7} { \node[tpu] at (\i,0) {}; }
+\foreach \i in {0,...,7} { \draw[grp] (\i-0.42,-0.32) rectangle (\i+0.42,0.32); }
+\node[lgd] at (8.0,0) {8 instances de 1 TPU \quad 8 Mio chacune};
+
+% --- ligne 2 : 4 pipelines de 2 TPU ---
+\foreach \i in {0,...,7} { \node[tpu] at (\i,-1) {}; }
+\foreach \s in {0,2,4,6} {
+  \draw[grp] (\s-0.42,-1.32) rectangle (\s+1.42,-0.68);
+  \draw[flx] (\s+0.32,-1) -- (\s+0.68,-1);
+}
+\node[lgd] at (8.0,-1) {4 instances de 2 TPU \quad 16 Mio chacune};
+
+% --- ligne 3 : 2 pipelines de 4 TPU ---
+\foreach \i in {0,...,7} { \node[tpu] at (\i,-2) {}; }
+\foreach \s in {0,4} { \draw[grp] (\s-0.42,-2.32) rectangle (\s+3.42,-1.68); }
+\foreach \i in {0,1,2,4,5,6} { \draw[flx] (\i+0.32,-2) -- (\i+0.68,-2); }
+\node[lgd] at (8.0,-2) {2 instances de 4 TPU \quad 32 Mio chacune};
+
+% --- ligne 4 : 1 pipeline de 8 TPU ---
+\foreach \i in {0,...,7} { \node[tpu] at (\i,-3) {}; }
+\draw[grp] (-0.42,-3.32) rectangle (7.42,-2.68);
+\foreach \i in {0,...,6} { \draw[flx] (\i+0.32,-3) -- (\i+0.68,-3); }
+\node[lgd] at (8.0,-3) {1 instance de 8 TPU \quad\ 64 Mio};
+\end{tikzpicture}
+\caption[Les 4 répartitions homogènes de 8 accélérateurs]{Les 4 manières homogènes de répartir les 8 Edge TPU de la carte, sur les 22 possibles. Chaque rectangle est un accélérateur, chaque encadré une instance du modèle, et les flèches marquent le passage de l'activation d'un étage au suivant.}
+\label{fig:configs}
+\end{figure}
+
+Ces 4 configurations mobilisent exactement les mêmes ressources matérielles et ne diffèrent que par la manière de les organiser. Avec les 18 répartitions hétérogènes, elles constituent l'espace de comparaison de l'axe multi-TPU. Chacune impose au modèle une contrainte de taille différente, puisque la SRAM disponible par instance est de 8, 16, 32 ou 64 Mio respectivement, et donc un taux d'élagage différent, donc une précision différente. C'est ce couplage entre organisation matérielle, taille de modèle et précision qui constitue l'objet de l'axe multi-TPU.
+
+\paragraph{Le cas des accélérateurs surnuméraires.} Les répartitions homogènes supposent que le nombre d'accélérateurs nécessaires à une instance divise 8, ce que rien ne garantit : un modèle qui n'atteint la tenue complète en mémoire interne qu'à 3 accélérateurs en laisse deux libres une fois 2 instances placées. On peut alors les absorber dans les pipelines existants, qui deviennent plus profonds que nécessaire sans qu'aucune instance ne subisse de streaming, les grouper en une instance supplémentaire incomplète, qui gagne une voie de traitement mais paie le streaming hors-puce, ou les disperser en autant d'instances d'un seul accélérateur. Les deux coûts en jeu, la communication ajoutée par une frontière de segment d'un côté et le streaming de l'autre, sont du même ordre de grandeur dès lors que le volume résiduel à transférer est faible : l'arbitrage a donc été tranché par la mesure, sur les deux grandeurs que la répartition fait diverger, la latence par échantillon et le débit cumulé. La section~\ref{sec:res_multi} en donne le résultat.
+
+\subsection{Intégration au framework}
+
+L'outil développé pour l'exploration mono-TPU a été étendu pour prendre en charge la configuration multi-TPU comme une variable additionnelle des configurations explorées. Le front de Pareto retient comme axes la latence, la précision et le débit ; la répartition des 8 accélérateurs entre instances y figure au même titre que le taux d'élagage parmi les variables dont le front dégage les meilleures combinaisons, chaque point du front portant donc à la fois un taux et une répartition. C'est aussi ce qui a imposé de mesurer les 22 répartitions plutôt que de présumer laquelle serait la bonne.
+
+Concrètement, la campagne a comporté 4 séries de mesures. La première établit la référence : chaque modèle, à chaque taux d'élagage, exécuté seul sur un unique Edge TPU. La deuxième balaie le pipeline sur toute son étendue, de 2 à 8 segments, et fournit les courbes de passage à l'échelle. La troisième balaie le parallélisme sur toute son étendue, de une à 8 copies indépendantes du modèle exécutées simultanément, ce qui permet de quantifier les interférences sur le bus PCIe partagé. La quatrième compare, à ressources matérielles constantes égales à 8 accélérateurs, les 22 manières de les répartir entre instances, ce qui couvre du même coup le cas où le nombre d'accélérateurs par instance ne divise pas 8 et les différentes façons d'employer les accélérateurs surnuméraires.
+
+Une difficulté de mesure a dû être contournée. L'ordonnanceur de pipeline fourni par la bibliothèque du constructeur introduit un surcoût de plusieurs centaines de millisecondes sans rapport avec le calcul, ce qui rend ses mesures de latence inexploitables, alors que ses mesures de débit restent valides. Les latences de pipeline ont donc été relevées par un enchaînement manuel des segments, en appelant successivement chaque TPU et en mesurant le temps total, ce qui contourne l'ordonnanceur.
+
+Une dernière question a été traitée à part : l'ordre dans lequel les accélérateurs sont affectés aux étages du pipeline. Les 8 TPU de la carte n'étant pas équivalents du point de vue du routage PCIe, cet ordre pouvait a priori influer sur les performances, ce qui aurait obligé à l'optimiser ou du moins à le fixer. Il a donc été caractérisé en tirant aléatoirement des permutations d'affectation et en mesurant la dispersion du débit qui en résulte, sur un modèle pilote d'abord, puis sur une série de modèles couvrant deux ordres de grandeur de taille. La section~\ref{sec:validation} rapporte la réponse, qui est négative.
+
+\subsection{Corpus synthétique}
+
+Le panel de 8 architectures ImageNet-1k ne couvre que 8 points dans l'espace (taille, profondeur, largeur, résolution d'entrée), et chacune de ces dimensions y varie en même temps que les autres, ce qui interdit d'attribuer un effet observé à un facteur particulier. Un corpus complémentaire de réseaux convolutifs synthétiques a donc été généré selon un plan factoriel : 5 familles topologiques (séquentielle, résiduelle, dense, et deux variantes à branches parallèles), 4 profondeurs, 5 largeurs et 4 résolutions d'entrée, soit 400 configurations, dont 291 ont pu être quantifiées et compilées pour l'Edge TPU. Ces modèles n'ont pas été entraînés : seule leur structure importe pour des mesures de latence et de débit, qui ne dépendent pas de la valeur des poids.
+
+Ce corpus a servi à deux usages distincts. En pipeline, il permet d'isoler l'effet de la résolution des entrées sur la latence, en balayant celle-ci à modèle constant : le volume de données transmis d'un segment au suivant est alors le seul paramètre à varier, toutes choses égales par ailleurs, ce qu'aucune paire d'architectures réelles ne permet d'obtenir. En parallèle, il a servi à identifier les sources d'interférence entre accélérateurs exécutés simultanément, la largeur du balayage en taille et en topologie permettant de distinguer les surcoûts fixes, indépendants du modèle, des surcoûts liés au volume de données échangé avec la mémoire hôte.
+
+\section{Métriques et outils d'analyse}
+\label{sec:metriques}
+
+\subsection{Métriques mesurées}
+
+L'ensemble des métriques décrites ci-dessous a été mesuré pour chaque configuration explorée et consigné dans un tableau récapitulatif couvrant toutes les configurations. Les mesures de latence et de débit ont été relevées en régime établi, après une phase de chauffe écartant les premières inférences. La latence de la toute première inférence a en revanche été mesurée séparément, car elle constitue un résultat en soi : c'est pendant celle-ci que les poids du modèle sont transférés vers la SRAM interne de l'accélérateur, et l'écart avec le régime établi mesure directement le coût de ce transfert. Ce tableau constitue la base d'une analyse des corrélations entre les performances observées et les caractéristiques matérielles de l'accélérateur, en particulier la répartition du modèle entre mémoire interne et mémoire externe telle que la rapporte le compilateur Edge TPU. Les métriques retenues sont les suivantes :
+
+\begin{itemize}
+  \item \textbf{Précision} : précision Top-1 du modèle quantifié INT8, mesurée sur le jeu de test CIFAR-100 pour l'axe mono-TPU et sur un sous-ensemble de la validation ImageNet-1k pour le second, selon les protocoles de la section~\ref{sec:modeles}.
+  \item \textbf{Écart de précision} : différence de précision Top-1 INT8 entre le modèle courant et le modèle de référence non pruné (une valeur négative indique une dégradation).
+  \item \textbf{Latence} : latence moyenne d'inférence du modèle INT8 sur l'Edge TPU, en millisecondes.
+  \item \textbf{Débit} : nombre d'inférences traitées par seconde, distinct de la latence dès lors que plusieurs TPU traitent des inférences simultanément ou en pipeline.
+  \item \textbf{Accélération due au pruning sur TPU} : rapport entre la latence du modèle de référence sur l'Edge TPU et celle du modèle courant sur l'Edge TPU.
+  \item \textbf{Réduction du nombre de paramètres} : diminution du nombre de paramètres du modèle courant par rapport au modèle de référence, exprimée en pourcentage.
+  \item \textbf{Taille du modèle} : taille du fichier du modèle TFLite INT8, en mébioctets.
+  \item \textbf{Données en mémoire interne} : volume de données du modèle placé dans la SRAM interne de l'Edge TPU, en mébioctets (plafond matériel de 8 Mio).
+  \item \textbf{Données en mémoire externe} : volume de données du modèle transféré depuis la RAM hôte via le bus hôte (USB sur la plateforme mono-TPU, PCIe sur la carte multi-TPU) pendant l'inférence, en mébioctets.
+  \item \textbf{Accélération du TPU par rapport au CPU} : rapport entre la latence du CPU en INT8 et celle de l'Edge TPU en INT8, qui quantifie l'apport de l'accélérateur.
+  \item \textbf{Latence de première inférence} : latence de l'inférence initiale, incluant le transfert des poids vers la SRAM interne, rapportée à la latence en régime établi.
+  \item \textbf{Nombre de segments} : nombre de partitions produites par le compilateur Edge TPU pour une configuration multi-TPU donnée, et volume de mémoire externe résiduel par segment. Cette métrique a servi de critère d'arrêt à la recherche du taux d'élagage : on élague jusqu'à ce que le compilateur ne reporte plus aucun transfert externe.
+\end{itemize}
+
+Le tableau récapitulatif en contient quelques autres, relevées au passage mais non exploitées dans les analyses qui suivent : la réduction du nombre de multiplications-accumulations, l'accélération due au pruning sur le CPU de la Raspberry Pi, et l'accélération due à la seule quantification.
+
+\subsection{Outils d'analyse mono-TPU}
+
+L'analyse des configurations mono-TPU s'appuie sur 4 graphes complémentaires.
+
+Le front de Pareto sur (latence, précision) identifie, pour chaque modèle, les configurations dominantes, c'est-à-dire celles pour lesquelles il est impossible d'améliorer un objectif sans en dégrader un autre. Il permet de dégager les meilleures combinaisons de critère d'importance et de taux d'élagage, et sert de support central à toute discussion comparative.
+
+La précision en fonction du taux de paramètres élagués, mesurée après récupération, permet de comparer les méthodes de pruning entre elles. Il convient toutefois de nuancer la portée de ce graphe. Le protocole PruningBench applique aux modèles un budget de récupération conséquent après l'élagage. Or il s'agit d'un résultat bien documenté de la littérature : l'écart entre une heuristique d'importance sophistiquée et un critère de sélection aléatoire se réduit fortement, voire devient marginal, dès que le budget de récupération est conséquent \cite{liuRethinkingValueNetwork2019}. Ce qui distingue réellement une bonne méthode de pruning n'est donc pas tant la précision finale que la précision avant récupération et la vitesse de convergence pendant la phase de récupération. C'est ce qui a motivé l'ajout des deux graphes décrits ci-dessous.
+
+La précision avant récupération en fonction du taux de paramètres élagués mesure la qualité intrinsèque du critère d'importance, avant que la phase de récupération ne masque les écarts entre méthodes.
+
+La vitesse de convergence pendant la récupération, suivie au fil des époques, distingue les critères selon la rapidité avec laquelle ils permettent de retrouver la précision initiale.
+
+Ces trois lectures partagent une limite, déjà signalée en section~\ref{sec:modeles} : le sur-dimensionnement des architectures au regard de CIFAR-100 comprime les écarts de précision entre critères. Les conclusions de l'axe mono-TPU sont donc à lire comme un classement relatif de critères, la mesure du coût réel de la compression relevant de l'axe multi-TPU.
+
+\subsection{Outils d'analyse multi-TPU}
+
+La question posée n'étant plus « quel critère élague le mieux » mais « comment répartir les accélérateurs », l'analyse multi-TPU mobilise une famille de représentations différente. Trois portent les résultats.
+
+\emph{Pipeline contre parallélisme.} Pour chaque architecture et chaque taux d'élagage, deux courbes superposées donnent le débit et la latence en fonction du nombre d'accélérateurs mobilisés, une fois selon le levier pipeline et une fois selon le levier parallèle. C'est la représentation la plus directe du contraste entre les deux, et elle se lit en regard du plus petit nombre d'accélérateurs pour lequel le compilateur ne signale plus aucun transfert externe.
+
+\emph{Fronts de Pareto.} Toutes les configurations d'une même architecture, c'est-à-dire tous les taux d'élagage croisés avec les 22 répartitions, sont reportées dans les plans (latence, précision) et (débit, précision). On y met en évidence les configurations que rien ne domine, en conservant les autres en gris : sans elles, le nombre de configurations que le front écarte serait invisible.
+
+\emph{Latence de pipeline à modèle constant.} Enfin, sur le corpus synthétique présenté en section~\ref{sec:multitpu}, la latence en fonction du nombre de segments pour un modèle unique dont on ne fait varier que la résolution d'entrée. C'est le seul dispositif qui isole l'effet du volume de données transmis entre segments, toutes choses égales par ailleurs, ce qu'aucune paire d'architectures réelles ne permet d'obtenir.
+
+\section{Espace d'exploration}
+\label{sec:conditions}
+
+Le produit cartésien des variables (modèle, critère d'importance, taux de compression) génère un volume de configurations important, et chaque configuration requiert un cycle complet d'élagage, de récupération, de conversion et d'évaluation. Sur l'ordinateur de bureau initialement prêté pour le stage, une seule époque d'entraînement prenait environ 30 minutes sur un jeu de données de complexité modérée, ce qui rendait la campagne infaisable séquentiellement.
+
+La solution principale a été le cluster de calcul du LAAS, exploité via le gestionnaire de tâches SLURM. Deux types d'accélérateurs y ont été utilisés : des NVIDIA RTX A6000, dont 3 sont accessibles sur la partition GPU, et 2 NVIDIA RTX PRO 6000 Blackwell. Chaque tâche dispose par ailleurs de 8 c\oe{}urs Intel Xeon 8352V. Sur CIFAR-100, une époque est ainsi tombée à environ 40 secondes, soit un facteur d'accélération d'environ 45.
+
+L'axe mono-TPU représente 441 configurations théoriques (7 architectures $\times$ 7 critères $\times$ 9 taux d'élagage de 10 à 90 \%), dont 404 ont abouti, les 37 restantes correspondant aux incompatibilités structurelles et à l'échec de conversion isolé détaillés en section~\ref{sec:pruning}.
+
+L'axe multi-TPU est beaucoup plus coûteux par configuration, ce qui a imposé de choisir les points mesurés plutôt que de balayer une grille : un cycle d'élagage et de récupération sur ImageNet-1k y coûte de quelques heures à près de 3 jours de calcul GPU. Une première campagne a produit 13 configurations, au plus 2 par architecture, pour 410 heures de calcul, ce qui ne décrit qu'une courbe de compromis très grossière. Une seconde a donc densifié 3 architectures, à raison d'un point par nombre d'accélérateurs en pipeline de 1 à 8, soit 24 cycles visés dont 23 ont abouti, pour 691 heures. Le vingt-quatrième, ResNet-101 à 8 accélérateurs, n'a pas de point propre : le compilateur y laisse le même volume externe qu'à 6 et 7 segments, si bien que la cible de taille y est identique à celle du point précédent. C'est le poste de dépense le plus lourd du stage, pour une seule raison : la finesse de la courbe de compromis conditionne toute l'analyse de l'axe multi-TPU.
+
+Les 13 cycles de la première campagne ont leur budget de récupération fixé d'après le taux d'élagage \emph{prédit}, selon le procédé corrigé en cours de campagne et décrit en section~\ref{sec:entrainement} : ce sont eux qui ont révélé l'écart entre taux prédit et taux atteint, donc motivé le correctif. Trois ont de ce fait reçu moins d'époques que la grille n'en prescrit pour le taux atteint. Ils sont conservés, le biais qui en découle étant traité explicitement au chapitre~\ref{chap:resultats}, où les comparaisons entre familles s'appuient sur des paires appariées en budget plutôt que sur l'ensemble du nuage. Parmi les 13, 12 ont par ailleurs été mesurées sur accélérateur, ResNet-50 à 69 \% ayant été entraîné mais non mesuré faute de temps sur la plateforme.
+
+Les mesures sur accélérateur ont en revanche été peu coûteuses au regard de l'entraînement : la campagne finale de l'axe multi-TPU, 946 configurations et 8,1 millions d'inférences chronométrées, a demandé 32 heures, et celle du corpus synthétique une treizaine.
+
+% =====================================================================
+%  CHAPITRE 5 - RESULTATS
+% =====================================================================
+\chapter{Résultats expérimentaux}
+\label{chap:resultats}
+
+\section{Validation du dispositif expérimental}
+\label{sec:validation}
+
+Avant de présenter les mesures, il faut établir qu'elles sont interprétables. La méthodologie a été validée par 3 scénarios complémentaires, chacun adressant une famille de risques distincte. Les deux premiers s'appliquent aux configurations mono-TPU comme multi-TPU ; le troisième est propre au régime multi-TPU.
+
+\subsection{Chaîne de conversion}
+
+La chaîne de conversion décrite en section~\ref{sec:conversion} ne fonctionne pas de manière universelle : certaines opérations PyTorch n'ont pas d'équivalent immédiat dans la version de TensorFlow ciblée. Cette difficulté a conduit à restreindre l'étude aux panels de modèles retenus, pour chacun desquels la chaîne a été validée individuellement. Le critère retenu est que la précision Top-1 du modèle final sur le jeu de test ne dégrade pas de plus de 1 à 3 points par rapport au modèle PyTorch original, ce qui correspond à l'effet attendu de la seule quantification INT8 ; au-delà, la chaîne contient un bug de conversion à corriger.
+
+Un second contrôle a vérifié que la compilation vers l'accélérateur ne change pas non plus ce que le modèle calcule. Pour chacune des 8 architectures de l'axe multi-TPU, les mêmes images ont été passées deux fois, une fois sur le processeur et une fois sur l'Edge TPU, puis les sorties comparées de deux manières : leur ressemblance d'ensemble, et le plus grand écart relevé sur une valeur isolée. Sept architectures sur 8 sont d'accord, avec une ressemblance supérieure à 0,999 et un écart d'au plus 10 niveaux sur une échelle qui en compte 256.
+
+La classe arrivée en tête, elle, n'est pas toujours la même : sur les 20 images examinées par architecture, près de 9 sur 10 reçoivent la même réponse des deux côtés. Les désaccords portent sur des images dont les premières classes ont des scores presque identiques, où il suffit d'un arrondi pour en inverser deux ; c'est le comportement attendu, pas le signe d'une erreur de compilation.
+
+Inception-ResNet-V2 fait exception, avec une ressemblance de 0,978 et jusqu'à 65 niveaux d'écart au lieu de 10 : le signal y traverse une très longue chaîne de blocs résiduels, et de petites erreurs d'arrondi s'y accumulent de proche en proche. Cet écart ne change cependant rien au résultat, ce modèle atteignant sur l'accélérateur 80,6 \% de précision, la meilleure du panel et son niveau d'avant conversion. C'est ce qui montre pourquoi la validation porte sur la précision mesurée et non sur la ressemblance des sorties.
+
+\subsection{Reproductibilité des mesures}
+
+La variabilité des résultats a été traitée du côté de la mesure plutôt que du côté de l'entraînement. Faute de temps de calcul, l'élagage n'a pas été rejoué avec plusieurs graines aléatoires : toute la campagne utilise la graine 42, et la part de variabilité imputable à l'aléa d'entraînement n'est donc pas quantifiée. C'est une limite assumée de l'étude, sur laquelle on revient au chapitre~\ref{chap:perspectives}.
+
+En revanche, chaque grandeur a été mesurée plusieurs fois. Sur l'axe mono-TPU, les latences ont été relevées sur 200 inférences successives, précédées de 30 inférences de chauffe. On en rapporte la moyenne, mais aussi l'écart-type, la médiane et les valeurs hautes, celles que seules 5 \% puis 1 \% des mesures dépassent.
+
+Cette dispersion s'est révélée faible. Sur l'Edge TPU, l'écart-type d'une série vaut en médiane 1,2 \% de la latence moyenne, et il reste sous 2 \% pour 85 \% des modèles mesurés ; sur les 7 modèles de référence, il va de 0,2 \% pour ResNet-18 à 2,1 \% pour SqueezeNet 1.1. Les écarts de latence commentés dans ce chapitre se comptent en facteurs : ils sont très au-dessus du bruit de mesure.
+
+Ces deux nombres, 30 et 200, ont été fixés une fois pour toutes avec une marge délibérée, et ce qui précède montre qu'elle est large : la latence rejoint son régime établi dès la 3\textsuperscript{e} inférence pour la moitié des modèles et à la 7\textsuperscript{e} dans le pire cas, et moyenner 200 mesures dispersées à 1,2 \% ramène l'incertitude sur cette moyenne sous le dixième de pour cent.
+
+La première inférence, plus dispersée par nature, a demandé un protocole distinct : 30 passes de 10 inférences, l'ordre des modèles étant mélangé d'une passe à l'autre pour qu'un échauffement progressif ne soit pas pris pour une différence entre modèles. Enfin, un intervalle de confiance à 95 \% a été calculé sur la précision de chaque modèle. Il mesure l'incertitude due à la taille finie du jeu de test, ici 10 000 images, et permet de savoir quels écarts de précision sont interprétables.
+
+L'axe multi-TPU a demandé un protocole distinct, parce qu'un point n'y est pas un modèle mais une répartition des 8 accélérateurs entre instances. La campagne chronomètre un nombre d'inférences fixe et identique partout : 1000 en latence, 1000 en débit, et 200 premières inférences dans des interpréteurs neufs. La précision y est évaluée sur 5000 images de validation, le même échantillon pour toutes les configurations.
+
+La répétabilité de ce protocole a été établie en répétant 10 fois le parcours complet des configurations : l'intervalle de confiance à 95 \% sur le débit moyen d'un point y vaut 0,18 \% en médiane. Un contrôle croisé sur 506 configurations remesurées à plusieurs semaines d'intervalle les retrouve à 0,51 \% près en débit et 0,36 \% près en latence.
+
+Un contrôle supplémentaire était nécessaire sur l'axe multi-TPU, où la précision n'est relevée qu'une fois par configuration, sans lecture complémentaire pour la corroborer, comme indiqué en section~\ref{sec:modeles}. Le risque n'est pas ici la dispersion de la mesure mais l'insuffisance du budget de récupération : une configuration dont l'entraînement aurait été interrompu avant son plateau afficherait une précision artificiellement basse, qui serait attribuée à tort à l'élagage. La trajectoire de la précision de validation au fil des époques a donc été tracée pour chacune des configurations élaguées, et confrontée à la précision du modèle pré-entraîné de départ. Toutes les configurations rapportées dans ce chapitre atteignent leur plateau, y compris aux taux d'élagage les plus sévères, ce qui établit que les précisions présentées sont bien les meilleures atteignables au budget accordé et non des entraînements écourtés. Cette vérification est aussi ce qui a conduit à écarter des résultats un petit nombre de configurations produites en début de campagne, pour la raison exposée en section~\ref{sec:conditions}.
+
+\subsection{Plateforme multi-TPU}
+
+Un troisième scénario, propre au régime multi-TPU, vérifie que les comparaisons entre configurations ne sont pas contaminées par la plateforme elle-même. Quatre risques ont été contrôlés.
+
+Le premier est l'hétérogénéité des accélérateurs : si les 8 Edge TPU de la carte n'avaient pas les mêmes performances, toute comparaison de configurations les mobilisant différemment serait biaisée. Chaque accélérateur a donc été mesuré individuellement sur le même modèle ; la dispersion des débits obtenus est de 0,025 \%, ce qui autorise à les considérer comme interchangeables du point de vue du calcul.
+
+Le deuxième est l'affectation elle-même. Les 8 accélérateurs sont interchangeables du point de vue du calcul, mais leur place dans le pipeline pourrait compter : ceux qui échangent directement avec l'hôte occupent une position particulière sur le bus PCIe. Sur Inception-V4 réparti sur les 8, 990 affectations tirées au hasard ont été mesurées, seule leur attribution aux accélérateurs variant. Le débit s'y étale sur 12,4 \% entre la meilleure et la pire, ce qui semble considérable. Cette étendue ne mesure pourtant pas l'effet de l'affectation, faute de terme de comparaison. Un second relevé l'a fourni : 990 mesures à affectation fixe et 990 à affectation aléatoire, entrelacées pour qu'aucune dérive ne frappe un seul des deux bras. Répéter la même affectation produit un étalement de 11,3 \%, contre 12,4 \% pour autant d'affectations différentes, et les débits moyens diffèrent de 0,05 \%. Les deux bras sont indiscernables.
+
+L'ordre des accélérateurs n'a donc pas d'effet mesurable, et la dispersion observée est celle de l'exécution elle-même. Elle vient de la profondeur du pipeline : le débit d'un pipeline vaut l'inverse de son étage le plus lent, si bien qu'il retient à chaque instant le maximum de 8 durées d'étage bruitées au lieu d'en faire la moyenne. Le découpage du compilateur, qui laisse un facteur 6 entre le segment le plus lourd et le plus léger, concentre encore cette sensibilité sur un seul étage. Le coefficient de variation du débit instantané le confirme, qui monte régulièrement de 0,16 \% à un seul étage à 1,38 \% à 8. Une étendue relevée sur près de 1000 tirages valant 6 à 8 fois l'écart-type, ces 12,4 \% sont exactement ce qu'une telle dispersion produit.
+
+Le troisième est la dérive dans le temps, thermique ou logicielle, qui entacherait les campagnes longues. La carte est installée en salle machine climatisée, et une configuration de référence a été réinsérée toutes les 100 mesures, soit 10 fois en 40 minutes. Son débit ne montre aucune tendance : la pente ajustée n'est pas distinguable de zéro ($t = -0{,}8$) et retirer une tendance linéaire ne réduit pas la dispersion. Les 10 points de contrôle s'étalent sur 1,95 \% sans structure temporelle, ce qui exclut une dérive franche, non une dérive de quelques dixièmes de pour cent.
+
+Le quatrième est l'interférence entre accélérateurs sur le bus PCIe partagé, qui pourrait faire passer pour un effet de configuration ce qui n'est qu'un effet de contention. Elle a été mesurée directement en exécutant de 1 à 8 copies indépendantes du même modèle et en comparant la latence individuelle à celle obtenue seul. Le rapport entre les deux, qui vaut 1 en l'absence de toute interférence, ne descend jamais sous 0,93 jusqu'à 8 accélérateurs, et reste au-dessus de 0,97 pour 7 des 8 architectures : les Edge TPU de la carte sont donc correctement isolés pour des charges dominées par le calcul. GoogLeNet est le seul à s'écarter du lot, à 0,938 pour 8 copies simultanées. C'est aussi le plus rapide du panel de l'axe multi-TPU, avec 5,0 ms par inférence sur cette plateforme, si bien que les surcoûts fixes d'appel y pèsent davantage en proportion. Cette valeur ne doit pas être confondue avec les 2,04 ms du tableau~\ref{tab:baselines} : il s'agit ici de la variante ImageNet-1k de GoogLeNet, en résolution $224 \times 224$, mesurée sur la carte PCIe à 8 accélérateurs, et non de la variante CIFAR-100 en $32 \times 32$ mesurée sur l'Edge TPU USB de l'axe mono-TPU.
+
+\section{Résultats mono-TPU}
+\label{sec:res_mono}
+
+Cette section présente la caractérisation de l'axe mono-TPU, celle qui fait l'objet de l'article DSD \cite{zouhdiPruningDeepNeural2026}. Toutes les mesures rapportées ici ont été relevées sur la plateforme mono-TPU décrite en section~\ref{sec:plateformes} : un Coral USB Accelerator connecté à une Raspberry Pi 4, la précision étant évaluée en INT8 sur les 10 000 images de test de CIFAR-100 et la latence en régime établi sur 200 inférences après 30 passes de chauffe. Les relevés complets, architecture par architecture et critère par critère, figurent en annexe~\ref{ann:tables}.
+
+\subsection{Régimes mémoire des modèles de référence}
+
+Avant d'élaguer quoi que ce soit, il faut caractériser le point de départ. Le tableau~\ref{tab:baselines} compare, pour les 7 architectures non élaguées, la latence d'inférence sur le CPU de la Raspberry Pi et sur l'Edge TPU, et met ces valeurs en regard de la répartition du modèle entre mémoire interne et mémoire externe telle que la rapporte le compilateur. La somme de ces deux volumes approche la taille du fichier TFLite INT8 sans la retrouver exactement, à 0,4 Mio près et dans les deux sens : la compilation réagence les poids et les aligne sur la granularité du matériel, si bien que le volume qu'elle comptabilise n'est pas celui du fichier dont elle part, ce sur quoi revient la section~\ref{sec:res_multi}. La dernière colonne rapporte la latence Edge TPU à la taille du fichier.
+
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\caption[Latence des modèles de référence sur CPU et Edge TPU]{Latence d'inférence des modèles de référence non élagués sur CPU et sur Edge TPU, et répartition du modèle entre mémoire interne et mémoire externe telle que la rapporte le compilateur. Les volumes sont en mébioctets et les lignes classées par volume externe croissant.}
+\label{tab:baselines}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Modèle & CPU & TPU & Interne & Externe & Taille & Accél. & Latence \\
+       & (ms) & (ms) & (Mio)  & (Mio)   & (Mio)  &        & (ms/Mio) \\
+\midrule
+SqueezeNet 1.1  &   4,6 &  0,67 & 0,82 &  0,00 &  0,83 &  6,9$\times$ & 0,81 \\
+MobileNetV2     &   9,7 &  1,24 & 2,79 &  0,00 &  2,70 &  7,8$\times$ & 0,46 \\
+GoogLeNet       &  63,0 &  2,04 & 5,94 &  0,00 &  5,66 & 30,9$\times$ & 0,36 \\
+\midrule
+ResNet-18       &  74,4 & 11,45 & 7,65 &  3,11 & 10,84 &  6,5$\times$ & 1,06 \\
+VGG-19          &  69,9 & 39,29 & 7,58 & 11,64 & 19,30 &  1,8$\times$ & 2,04 \\
+ResNet-50       & 190,2 & 50,92 & 7,66 & 15,26 & 23,30 &  3,7$\times$ & 2,19 \\
+WRN-28-10       & 677,8 & 92,13 & 7,65 & 27,74 & 35,13 &  7,4$\times$ & 2,62 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+L'accélérateur apporte un gain sur l'intégralité du panel, mais dont l'amplitude varie d'un facteur 17 selon l'architecture : de 1,8$\times$ pour VGG-19 à 30,9$\times$ pour GoogLeNet. Le meilleur résultat revient à GoogLeNet, dont les poids tiennent intégralement en mémoire interne, et le moins bon à VGG-19, dont une large part doit être diffusée depuis la mémoire hôte à chaque inférence. Les deux extrêmes s'expliquent donc par la quantité de poids restant hors de la mémoire interne.
+
+Il faut se garder d'en tirer davantage, car cette colonne est un rapport au CPU et se trouve donc contaminée par le comportement CPU propre à chaque modèle. Le classement qu'elle produit ne suit pas le volume transféré : WRN-28-10, qui diffuse 27,74 Mio à chaque inférence, y devance SqueezeNet 1.1 qui tient entièrement en SRAM.
+
+Neutraliser le CPU demande de rapporter la seule latence Edge TPU à une mesure du travail utile. La taille du modèle INT8 en fait office, et c'est la dernière colonne du tableau. Le classement devient alors strictement ordonné par le volume externe. Les 3 architectures qui tiennent intégralement en mémoire interne restent toutes sous la milliseconde par mébioctet ; les 4 qui débordent de la SRAM sont toutes au-dessus, et progressent ensuite dans l'ordre exact du volume transféré : 1,06 ms pour ResNet-18 qui ne diffuse que 3,11 Mio, puis 2,04, 2,19 et 2,62 ms à mesure que ce volume monte à 11,64, 15,26 puis 27,74 Mio.
+
+Le tableau~\ref{tab:coldstart} permet d'aller plus loin. Il compare la latence de la toute première inférence dans un interpréteur neuf, pendant laquelle les poids sont chargés vers la mémoire interne, à celle de l'inférence suivante. Chacune de ces deux latences contient le calcul du modèle et le streaming de sa part externe ; c'est leur écart, et lui seul, qui retient le chargement initial.
+
+\begin{table}[H]
+\centering\small
+\caption[Latence de démarrage à froid sur Edge TPU]{Latence de première inférence sur Edge TPU comparée à celle de la seconde, dans un interpréteur nouvellement créé. La seconde inférence n'est pas le régime établi du tableau~\ref{tab:baselines}, dont elle diffère de quelques pourcents.}
+\label{tab:coldstart}
+\begin{tabular}{lrrr}
+\toprule
+Modèle & 1\textsuperscript{re} inf. (ms) & 2\textsuperscript{e} inf. (ms) & Rapport \\
+\midrule
+GoogLeNet       &  21,43 &  2,13 & 10,04$\times$ \\
+WRN-28-10       & 116,66 & 91,13 &  1,28$\times$ \\
+ResNet-18       &  36,94 & 11,51 &  3,21$\times$ \\
+MobileNetV2     &  10,97 &  1,34 &  8,18$\times$ \\
+SqueezeNet 1.1  &   3,88 &  0,75 &  5,15$\times$ \\
+ResNet-50       &  75,62 & 50,23 &  1,51$\times$ \\
+VGG-19          &  63,92 & 38,79 &  1,65$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Le rapport s'échelonne de 1,28$\times$ pour WRN-28-10 à 10,04$\times$ pour GoogLeNet. Les transferts mémoire pèsent donc lourdement sur la latence totale, la première inférence étant d'un quart à 10 fois plus lente que le régime établi selon l'architecture.
+
+Ce tableau établit surtout un point décisif. Les 4 modèles qui streament paient tous le même surcoût de première inférence, de 25,1 à 25,5 ms, soit un accord à 1,6 \%, alors que leurs tailles totales s'échelonnent de 10,8 à 35,1 Mio. Ce qu'ils ont en commun n'est pas leur taille mais leur volume interne, compris entre 7,58 et 7,66 Mio. Le surcoût initial est donc proportionnel à la seule part logée en SRAM, ce qui établit que cette part est chargée une fois puis conservée : si elle était réécrite à chaque inférence, ces 25 millisecondes se retrouveraient dans le régime établi et le rapport entre première et seconde inférence vaudrait environ 1 partout, alors qu'il atteint 10 sur GoogLeNet. En régime établi, une inférence paie donc le calcul, plus le transfert de la seule part externe.
+
+\subsection{Modèle de latence à deux régimes}
+
+Les deux tableaux qui précèdent se résument en un modèle prédictif à deux régimes. En notant $E$ le volume laissé en mémoire externe et $I$ le volume logé en mémoire interne, tous deux en mébioctets, $C$ le temps de calcul propre au modèle, $k$ le coût de transfert d'un mébioctet sur le bus hôte et $c$ un coût fixe d'initialisation :
+%
+\begin{align*}
+\text{latence en régime établi} \;&=\; C \;+\; k\,E \\[2pt]
+\text{latence de la première inférence} \;&=\; C \;+\; k\,E \;+\; k\,I \;+\; c
+\end{align*}
+%
+La part interne est chargée une fois puis conservée, comme l'établit le tableau~\ref{tab:coldstart}, d'où le terme $k\,I$ qui n'apparaît qu'à la première inférence ; la part externe est retransmise à chaque fois, d'où le terme $k\,E$ présent dans les deux régimes. Les trois termes ont été identifiés séparément.
+
+Le coefficient de transfert $k$ se mesure directement en régime établi, sans recourir à aucun modèle auxiliaire. Si la latence vaut $C + k\,E$, alors, à architecture fixée, elle est affine en le volume externe et la pente de cette droite est $k$. La campagne d'élagage fournit de quoi la tracer : ses 410 modèles couvrent des volumes externes allant de zéro à 27,7 Mio, et 4 des 7 architectures y sont mesurées à des dizaines de taux d'élagage différents, donc à autant de volumes externes, l'architecture restant la même d'un point à l'autre. Le tableau~\ref{tab:kfit} donne l'ajustement obtenu pour chacune.
+
+\begin{table}[H]
+\centering\small
+\caption[Coefficient de transfert mesuré par architecture]{Ajustement de la latence en régime établi sur le volume laissé en mémoire externe, $L = C_0 + k\,E$, conduit séparément sur chacune des 4 architectures dont la campagne d'élagage produit des variantes en régime de streaming.}
+\label{tab:kfit}
+\begin{tabular}{lrrcrrl}
+\toprule
+Modèle & $n$ & $E$ max & $k$ & $C_0$ & $R^2$ & $C$ mesuré \\
+       &     & (Mio)   & (ms/Mio) & (ms) & & (ms) \\
+\midrule
+ResNet-18 & 22 &  3,1 & $3{,}384 \pm 0{,}018$ & 1,04 & 0,9994 & 0,61 à 1,42 \\
+ResNet-50 & 47 & 15,3 & $3{,}247 \pm 0{,}008$ & 1,30 & 0,9997 & 0,93 à 1,92 \\
+VGG-19    & 37 & 11,6 & $3{,}271 \pm 0{,}005$ & 1,15 & 0,9999 & 0,61 à 1,04 \\
+WRN-28-10 & 63 & 27,7 & $3{,}249 \pm 0{,}006$ & 2,04 & 0,9998 & aucune variante \\
+\midrule
+Les 4 & 169 & 27,7 & $3{,}273 \pm 0{,}005$ & 1,38 & 0,9996 & 0,61 à 1,92 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Les 4 pentes s'accordent à 4,2 \%, entre 3,25 et 3,38 ms par mébioctet, alors que les architectures concernées n'ont ni la même profondeur, ni le même nombre d'opérations, ni la même latence de base. Chaque ajustement explique plus de 99,9 \% de la variance, avec un résidu maximal de 1,18 ms sur des latences qui atteignent 92 ms. En y ajoutant les 241 modèles logés en mémoire interne, qui ancrent l'origine, la droite vaut $1{,}15 + 3{,}29\,E$ sur les 410 modèles, avec $R^2 = 0{,}9995$ et un résidu maximal de 2,06 ms. On retiendra \textbf{\boldmath$k = 3{,}3$ ms par mébioctet}.
+
+Une seconde voie, indépendante de la première, confirme cette valeur. L'écart entre la première et la seconde inférence ne retient que le chargement initial de la mémoire interne : les deux expressions du modèle ne diffèrent que par les termes $k\,I$ et $c$, puisque le calcul est le même et que le streaming de la part externe est payé dans les deux cas. Soustraire la seconde inférence de la première élimine donc à la fois $C$ et $k\,E$. Ajusté sur les 7 architectures de référence, cet écart vaut $0{,}44 + 3{,}25\,I$, avec un résidu maximal de 0,44 ms pour des volumes internes allant de 0,8 à 7,7 Mio. Les deux estimations s'accordent à 1,3 \%, alors qu'elles ne reposent ni sur les mêmes modèles ni sur la même grandeur : la latence en régime établi de 410 modèles pour la première, l'écart entre les deux premières inférences de 7 modèles de référence pour la seconde. Que le même coefficient gouverne les deux termes du modèle n'est donc pas une hypothèse commode : ce sont les mêmes octets empruntant le même lien, et la mesure le vérifie.
+
+Le coût fixe $c$ est la part de l'initialisation qui ne dépend pas du volume transféré. L'ajustement précédent le situe autour d'une demi-milliseconde, entre 0,4 et 0,9 ms selon la façon dont on traite le recouvrement discuté plus bas. Cette imprécision est sans conséquence, le terme devenant négligeable devant le reste dès que le modèle dépasse quelques mébioctets ; il explique en revanche pourquoi SqueezeNet 1.1, qui ne charge que 0,8 Mio, affiche un coût apparent de 3,8 ms par mébioctet plutôt que 3,3.
+
+Le temps de calcul $C$ est propre à chaque architecture et n'est pas prédit ici, mais il est mesuré, et par deux voies plutôt qu'une. Directement d'abord : sur les 241 modèles de la campagne d'élagage qui, une fois réduits, tiennent entièrement en mémoire interne, $E$ est nul et la latence mesurée vaut donc $C$ ; il s'y échelonne de 0,57 à 2,23 ms. Par l'ajustement ensuite : l'ordonnée à l'origine du tableau~\ref{tab:kfit} est, par construction, la latence qu'aurait le modèle sans aucun streaming, et sa dernière colonne rappelle la plage des latences relevées sur les variantes de la même architecture qui, une fois élaguées, tiennent entièrement en mémoire interne. Les deux lectures concordent, et c'est un contrôle que le modèle aurait pu échouer. Pour ResNet-18 et ResNet-50, l'ordonnée tombe à l'intérieur de cette plage. Pour VGG-19 elle la dépasse de 0,11 ms, et dans le sens attendu, les seules variantes de VGG-19 logées en SRAM étant les plus fortement élaguées, donc celles qui calculent le moins. WRN-28-10 n'a aucune variante logée en mémoire interne, ce qui est cohérent avec sa taille, et son temps de calcul n'est connu que par l'ordonnée. Une estimation de $C$ par régression sur la taille du modèle avait été tentée dans un premier temps ; elle est inutilisable, la taille n'expliquant que 38 \% de la variance des latences internes, deux architectures de même taille n'exécutant pas le même nombre d'opérations. L'ajustement par architecture la remplace avantageusement, puisqu'il donne $C$ sans avoir à le modéliser.
+
+Le coefficient $k$ se comporte bien comme un transfert sur le bus hôte : 3,3 ms par mébioctet correspond à un débit effectif de 304 Mio/s, soit 319 Mo/s, l'ordre de grandeur de ce qu'un lien USB 3.0 délivre en pratique sur une Raspberry Pi 4, dont le contrôleur USB transite par un pont sur une unique voie PCIe partagée avec l'interface réseau. C'est une constante de la plateforme prise dans son ensemble, hôte compris, et non du seul protocole du lien, nuance sur laquelle revient la section~\ref{sec:persp_modele}. À ce titre elle est réutilisable telle quelle sur cette plateforme : c'est le paramètre dont un modèle de coût a besoin pour prédire ce que vaudra un modèle donné avant de le déployer.
+
+Deux vérifications complètent ce résultat, l'une sur l'étendue et l'autre sur le corpus. La linéarité en $E$ est établie ci-dessus sur une plage de volumes externes qui ne dépasse pas 28 Mio ; les 176 réseaux synthétiques qui débordent de la mémoire interne l'étendent de 0,06 à 133 Mio, soit 3 ordres de grandeur, le coefficient y restant stable et sa dispersion se resserrant à mesure que le transfert prend le pas sur le calcul, de $\pm 9$ \% entre 5 et 20 Mio à $\pm 2$ \% au-delà de 50. Quant à la stabilité d'un corpus à l'autre, le coefficient estimé par la soustraction de première inférence vaut 3,15 ms par mébioctet sur ces réseaux synthétiques et 3,29 sur les 241 modèles élagués de l'axe mono-TPU, contre 3,25 sur les 7 architectures de référence. Ces trois corpus n'ont en commun ni la taille des modèles, ni la tâche apprise, ni la façon dont ils ont été construits, et leurs estimations s'échelonnent sur 4 \%, soit le cinquième de l'écart entre les deux plateformes. C'est la propriété qu'on attend d'une constante de plateforme : elle dépend de la machine, non des modèles qu'on y fait tourner.
+
+Reste à s'assurer que ce coefficient est bien celui d'un transfert, et non une propriété de l'accélérateur lui-même. Le test consiste à changer de chemin de données sans rien changer d'autre. Les 410 binaires de l'axe mono-TPU ont donc été rejoués sur un accélérateur de la carte PCIe multi-TPU, avec le même protocole et le même ajustement que ci-dessus. La latence y est tout aussi exactement affine en le volume externe, $0{,}80 + 2{,}76\,E$ avec $R^2 = 0{,}9996$ et un résidu maximal de 1,41 ms, mais la pente a changé : 2,76 ms par mébioctet, soit 363 Mio/s, contre 3,29 et 304 Mio/s sur la plateforme USB. Les mêmes poids, sur le même silicium et pour le même calcul, coûtent 16 \% de moins à transporter, ce que l'on peut lire aussi comme 19 \% de bande passante en plus. Le terme $k\,E$ suit donc le chemin de données et non le calcul, ce qui achève de l'identifier comme un transfert. Ces deux plateformes diffèrent toutefois par leur hôte autant que par leur lien, et la mesure attribue cet écart à leur effet conjoint sans les départager ; la section~\ref{sec:persp_modele} rapporte ce qu'une troisième plateforme apprend sur ce point. La valeur obtenue converge par ailleurs avec les 2,5 ms par mébioctet que donne, sur le même bus mais par une régression indépendante, la section~\ref{sec:res_multi}.
+
+Ce modèle et ses constantes admettent une validation externe. Gao, Choi et Wang \cite{gaoWorkInProgressModeling2025} proposent indépendamment, pour le même accélérateur, la même décomposition en plus fin : leur distinction entre les poids qui doivent être résidents avant que le calcul commence et ceux qui peuvent être diffusés pendant qu'il s'exécute est exactement notre partage entre $I$ et $E$, et leur surcoût par frontière de segment correspond à notre $c$. Deux de leurs grandeurs se comparent aux nôtres et concordent : ils mesurent la bande passante hôte vers accélérateur par transfert direct de tenseurs, et non par inférence, et trouvent 340 Mio/s sur Coral USB et Raspberry Pi 5 contre nos 304 sur Raspberry Pi 4, écart qui va dans le sens attendu d'un contrôleur plus récent mesuré dans son meilleur cas ; et ils estiment le surcoût fixe à 1,0 ms par segment dans une plage de 0,3 à 2,0, quand nous mesurons environ 0,5 ms à segment unique.
+
+Leur décomposition compte en revanche deux termes que la nôtre ignore. Le transfert de l'entrée, d'abord, que la taille de nos images rend négligeable, moins de 0,01 ms pour une image CIFAR-100, mais qui coûte près d'une demi-milliseconde pour une entrée de $224 \times 224$ sur l'axe multi-TPU. Le transfert de la sortie ensuite, et il porte une réserve plus sérieuse : ils mesurent dans ce sens une bande passante 4 à 10 fois inférieure à celle de l'aller. Nos sorties, 100 ou 1000 classes quantifiées, ne pèsent que quelques centaines d'octets, mais le modèle établi ici ne se transpose pas tel quel à une tâche à sortie dense, segmentation ou détection, où le retour vers l'hôte deviendrait un terme de premier ordre.
+
+Deux réserves accompagnent enfin cette lecture. La première est que le volume externe reste étroitement lié à la taille totale, qui sert de dénominateur à la dernière colonne du tableau~\ref{tab:baselines} : la progression relevée plus haut illustre le mécanisme plutôt qu'elle ne le démontre. La démonstration proprement dite vient du tableau~\ref{tab:kfit}, où la pente est établie à architecture constante, puis de la sous-section suivante, où le franchissement du seuil est observé à modèle constant.
+
+La seconde porte sur le recouvrement entre calcul et chargement : le modèle somme ses termes, ce qui correspond au cas sans recouvrement et majore donc la latence de première inférence. Les résidus établissent que ce recouvrement existe, sans en fixer l'amplitude sur le bus USB, ce dont la section~\ref{sec:persp_modele} rend compte. Sa portée est doublement limitée : l'erreur introduite est bornée par une fraction du seul temps de calcul, soit 1 à 2 millisecondes sur ce panel contre les 25 de surcoût de première inférence qu'elle corrigerait, et imposer l'une ou l'autre des valeurs candidates déplace $k$ de 1 \%.
+
+\subsection{Effet de seuil sur la latence}
+
+L'effet de l'élagage sur la latence est le résultat central de cet axe, et il ne correspond pas à ce que laisse attendre une réduction progressive du nombre de paramètres. La figure~\ref{fig:speedup_panel} donne, pour chacune des 7 architectures et chacun des 7 critères, l'accélération obtenue sur Edge TPU en fonction de la réduction réelle du nombre de paramètres.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_speedup}
+    \caption{Accélération sur Edge TPU en fonction de la réduction réelle du nombre de paramètres, par critère et par architecture ; l'axe supérieur donne la taille INT8 correspondante. Le trait discontinu marque la référence non élaguée, le trait mixte le passage sous 8~Mio.}
+    \label{fig:speedup_panel}
+\end{figure}
+
+Pour toutes les architectures dont l'empreinte non élaguée dépasse la capacité de la mémoire interne, soit 8 Mio dont le compilateur réserve environ 7,6 aux poids sur des entrées de $32 \times 32$, la courbe n'est pas une pente régulière mais un seuil : l'accélération progresse lentement tant que le modèle reste au-dessus de cette capacité, puis bondit au moment précis où le streaming des poids disparaît. C'est exactement ce que prédit le modèle établi plus haut : tant que $E$ reste positif, la latence est dominée par le terme de transfert $k\,E$ ; lorsque l'élagage annule $E$, il ne reste que le temps de calcul $C$, soit 1 à 2 millisecondes. Le saut n'est donc pas un phénomène à constater, c'est une conséquence arithmétique. Son amplitude se mesure sur les 20 couples de configurations qui encadrent le seuil, à critère et architecture fixés : le franchissement divise la latence par 2,7 en médiane, de 1,2 à 6,3 selon le couple. Elle varie donc d'un modèle à l'autre, mais le seuil lui-même est présent sur toutes les architectures concernées, alors que GoogLeNet, MobileNetV2 et SqueezeNet 1.1, qui tiennent déjà en mémoire interne sans élagage, ne montrent aucun saut. Chaque courbe suivant une architecture unique progressivement réduite, le saut ne peut pas s'expliquer par une particularité d'architecture : c'est la démonstration annoncée plus haut, que la mise en regard des 7 références ne pouvait pas fournir.
+
+C'est le résultat le plus directement actionnable de cet axe. Sur cet accélérateur, un taux d'élagage n'a pas de valeur en soi : ce qui compte est de savoir de quel côté du seuil de 8 Mio il place le modèle.
+
+\subsection{Impact de l'élagage sur la précision}
+
+La figure~\ref{fig:accuracy_panel} donne la contrepartie : la précision Top-1 INT8 mesurée sur l'accélérateur, en fonction du même taux de réduction.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_accuracy}
+    \caption{Précision Top-1 INT8 mesurée sur Edge TPU en fonction de la réduction réelle du nombre de paramètres, par critère et par architecture ; l'axe supérieur donne la taille INT8 correspondante.}
+    \label{fig:accuracy_panel}
+\end{figure}
+
+La précision ne décroît que modérément avec la compression, sur les 7 architectures : elle se maintient largement jusqu'à environ 60 \% de paramètres retirés. Un écart franc entre critères n'apparaît qu'aux taux les plus élevés.
+
+Deux observations en découlent. La première est que, jusqu'à 60 \% de paramètres retirés, le choix du critère est presque indifférent du point de vue de la précision finale, le critère aléatoire lui-même restant au contact des critères informés. C'est cohérent avec un résultat établi de la littérature, selon lequel l'écart entre une heuristique sophistiquée et une sélection aléatoire s'estompe dès que le budget de récupération est généreux \cite{liuRethinkingValueNetwork2019}, ce qui est le cas de la recette PruningBench employée ici. La seconde est que la précision après récupération ne suffit donc pas à départager les critères, ce qui motive les deux lectures complémentaires ci-dessous.
+
+\subsection{Comparaison des critères d'importance}
+
+La première lecture complémentaire est la précision retenue immédiatement après l'élagage, avant toute récupération. C'est la mesure de la qualité intrinsèque du critère : elle dit combien d'information utile la sélection a préservé, avant que la phase de récupération ne vienne réparer ce qu'elle a détruit. La figure~\ref{fig:post_prune} la donne pour les 7 architectures.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_post_prune}
+    \caption{Précision Top-1 de validation immédiatement après élagage, avant toute récupération, en fonction de la cible d'élagage, par critère et par architecture ; l'axe supérieur donne la taille INT8 visée.}
+    \label{fig:post_prune}
+\end{figure}
+
+Les critères y divergent radicalement, là où la précision finale les confondait. Les deux qui estiment la sensibilité par le gradient, Taylor et OBD-C, préservent une quantité d'information sans commune mesure avec les autres. Sur ResNet-50 élagué à 40 \% de ses paramètres, Taylor retient encore 45,8 \% de Top-1 sans le moindre réentraînement et OBD-C 22,5 \%, là où magnitude-L1 est déjà retombé à 13,8 \% et la sélection aléatoire au niveau du hasard. Si les critères de magnitude rejoignent malgré tout les autres en précision finale, c'est uniquement parce que le budget de récupération compense ce qu'ils ont détruit au moment de l'élagage.
+
+La seconde lecture complémentaire est la vitesse à laquelle cette réparation s'opère. La figure~\ref{fig:ft_traj} la suit au fil des 100 époques sur MobileNetV2, l'architecture du panel où les critères se séparent le plus à 90 \% : les précisions finales y couvrent 18,1 points, contre 10,7 sur VGG-19 et 6,0 sur ResNet-50.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/ft_a1_mobilenetv2_corps}
+    \caption{Trajectoires de récupération de MobileNetV2 à 3 cibles d'élagage, une courbe par critère d'importance. Les décrochements aux époques 60 et 80 correspondent aux décroissances du taux d'apprentissage. OBD-C est absent, l'architecture n'étant pas supportée par ce critère.}
+    \label{fig:ft_traj}
+\end{figure}
+
+Aux taux modérés, les trajectoires sont pratiquement superposées d'un critère à l'autre, la chute initiale étant faible et rapidement rattrapée. À 90 \% elles se séparent nettement, et dans l'ordre annoncé par la lecture précédente : Taylor repart de 46,7 \% dès la première époque quand la sélection aléatoire repart de 9,4 \%, et l'écart ne se referme jamais, les deux finissant à 64,5 et 46,4 \%. Le budget de récupération n'est donc pas un égalisateur universel : il l'est tant que l'élagage reste modéré et cesse de l'être quand la compression devient sévère.
+
+\subsection{Compromis entre précision et latence}
+
+Le dernier résultat de cet axe est celui qui pèse le plus sur le choix d'un critère : celui qui préserve le mieux la précision n'est pas celui qui procure la plus forte accélération. Cette décorrélation apparaît aux taux de réduction élevés, précisément là où les précisions après récupération se séparent enfin. Au-delà de 70 \% de réduction, tous les modèles élagués tiennent en mémoire interne quel que soit le critère, à la seule exception de WRN-28-10 qui streame encore à 90 \% : sur les autres architectures, les différences de latence qui subsistent ne reflètent donc plus le streaming, mais uniquement le choix des canaux retirés.
+
+Dans ce régime, les deux critères à gradient, Taylor et OBD-C, retiennent le plus de précision mais produisent les accélérations les plus faibles, tandis que les critères de magnitude et FPGM obtiennent les plus fortes accélérations au prix d'une perte de précision nette. Sur ResNet-50, la corrélation de rang entre les deux grandeurs vaut $\rho = -0{,}82$ à 80 \% de réduction ($p = 0{,}02$), et à 90 \% OBD-C conserve 75,2 \% de Top-1 (IC 95 \% : [74,3 ; 76,1]) pour une accélération de 37$\times$, quand magnitude-L2 atteint 55$\times$ mais retombe à 71,4 \% ([70,5 ; 72,3]). Les deux intervalles étant disjoints, l'écart est réel.
+
+L'explication tient à ce que chaque critère élague. Les structures les plus redondantes du point de vue de la précision ne sont pas celles dont la suppression libère le plus de temps de calcul : un critère qui cible les paramètres les moins utiles à la sortie n'a aucune raison de cibler simultanément ceux dont l'exécution coûte le plus cher sur un réseau systolique. Le choix du critère d'importance est donc un arbitrage explicite entre précision et latence, dans lequel aucun critère ne domine sur les deux dimensions à la fois.
+
+C'est ce que synthétisent les fronts de Pareto de la figure~\ref{fig:pareto_resnet50}, qui reportent chaque configuration dans le plan (latence, précision), une architecture par panneau.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_pareto}
+    \caption{Fronts de Pareto de la précision contre la latence, sur les modèles élagués, une architecture par panneau. L'étoile et le trait horizontal marquent le modèle de référence non élagué ; l'opacité des marqueurs croît avec le taux de compression.}
+    \label{fig:pareto_resnet50}
+\end{figure}
+
+Le front n'est occupé par aucun critère unique : selon la latence que l'on s'autorise, la configuration dominante change de critère. C'est précisément ce jeu de configurations Pareto-optimales qui constitue le livrable exploitable de cet axe.
+
+\subsection{Conclusion de l'analyse mono-TPU}
+
+Trois conclusions se dégagent. D'abord, la latence sur Edge TPU est gouvernée par un seuil et non par une pente : ce qui compte n'est pas le taux d'élagage mais le fait que l'empreinte résultante passe ou non sous la capacité de la mémoire interne. Ensuite, la précision se maintient largement jusqu'à environ 60 \% de paramètres retirés sur les architectures étudiées, ce qui laisse une marge de manœuvre confortable pour viser ce franchissement. Enfin, au-delà de ce point, le choix du critère devient un arbitrage explicite entre précision et latence, sans critère dominant sur les deux dimensions : c'est ce qui rend la publication du front de Pareto complet plus utile que la désignation d'un « meilleur » critère.
+
+Cette dernière propriété est ce qui rend ces mesures directement exploitables en aval. Un ordonnanceur temps-réel qui dispose, pour chaque modèle, du jeu complet des couples (précision, temps d'exécution) atteignables peut choisir par tâche le point de fonctionnement qui maximise la précision globale du système sous contrainte de respect des échéances. C'est l'objet de la seconde partie de l'article DSD \cite{zouhdiPruningDeepNeural2026}, menée par les collègues de l'équipe travaillant sur l'ordonnancement, et qui n'est pas détaillée ici.
+
+\section{Résultats multi-TPU}
+\label{sec:res_multi}
+
+Cette section présente l'axe multi-TPU. Les mesures rapportées ici ont été relevées sur la carte PCIe à 8 Edge TPU décrite en section~\ref{sec:plateformes}, sur le panel de 8 architectures ImageNet-1k de la section~\ref{sec:modeles} d'une part, et sur le corpus de réseaux synthétiques de la section~\ref{sec:multitpu} d'autre part.
+
+La campagne couvre 43 modèles : les 8 architectures non élaguées, et 35 modèles élagués répartis sur ces mêmes architectures, dont 23 sur les 3 que le balayage du nombre d'accélérateurs a densément couvertes. Chacun a été mesuré dans les 22 manières de répartir 8 accélérateurs entre instances, soit 946 configurations, avec le protocole uniforme de la section~\ref{sec:validation} : 1000 inférences chronométrées en latence, 1000 en débit, et la précision INT8 relevée sur les mêmes 5000 images de validation. Le relevé par checkpoint figure en annexe~\ref{ann:multitpu}, avec le journal des entraînements. Une répartition est notée par le nombre d'accélérateurs de chaque instance : $4\times2$ désigne 2 instances de 4 étages, $1\times8$ 8 instances d'un seul étage, $5{+}3$ une instance de 5 étages et une de 3.
+
+La question posée n'est plus celle du critère d'élagage mais celle de la répartition des accélérateurs, et celle de la précision que l'on abandonne réellement pour l'obtenir sur une tâche exigeante, ce que CIFAR-100 ne permettait pas de mesurer. On l'aborde en trois temps : d'abord les deux leviers pris séparément, dont les signatures opposées donnent la règle de déploiement ; ensuite la mise en regard du gain de performance et de la précision qu'il coûte, qui est l'objet même de l'axe ; enfin un test complémentaire sur le corpus synthétique, destiné à savoir si la taille des tenseurs pèse elle aussi dans la balance.
+
+\subsection{Comparaison du pipeline et du parallélisme}
+
+Les deux leviers se lisent d'abord séparément, en faisant croître le nombre d'accélérateurs de 1 à 8. La figure~\ref{fig:pipe_vs_par} en donne 4 cas, choisis pour balayer le besoin de logement du modèle : d'Inception-V3 élagué à 84 \%, qui tient en mémoire interne sur un seul accélérateur, à ResNet-152 non élagué, qui n'y tient sur aucun découpage.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_pipe_par}
+    \caption[Pipeline contre parallélisme]{Débit cumulé et latence par échantillon en fonction du nombre d'accélérateurs mobilisés, selon le levier employé. Quatre cas ordonnés par besoin de logement croissant.}
+    \label{fig:pipe_vs_par}
+\end{figure}
+
+Les signatures sont sans ambiguïté. Le parallélisme donne une droite en débit et une horizontale en latence : la latence individuelle est strictement inchangée, puisque chaque copie travaille seule sur son échantillon, et le débit cumulé croît proportionnellement au nombre de copies. Le rendement de cette croissance est excellent, la mesure d'interférence de la section~\ref{sec:validation} montrant qu'une copie sur 8 conserve de 93 à 99,8 \% du débit qu'elle aurait seule sur la carte.
+
+Le pipeline se comporte tout autrement. Sa latence suit une courbe en V : elle chute d'abord fortement, parce que le cumul des mémoires internes élimine le streaming des poids, puis remonte, parce que chaque frontière de segment ajoutée coûte une communication qui n'est plus compensée par rien. Son débit plafonne, l'étage le plus lent bornant la cadence de l'ensemble.
+
+Le levier gagnant bascule donc de l'un à l'autre à mesure que le besoin du modèle grandit, et c'est ce que montre l'ordre des 4 panneaux. Inception-V3 élagué à 84 \% tient sur un seul accélérateur : 8 copies indépendantes donnent 1375 images par seconde et 5,4 ms de latence, quand le meilleur pipeline plafonne à 260 images par seconde et ne descend pas sous 6,7 ms. Le parallélisme y est 5,3 fois meilleur en débit et meilleur en latence par surcroît. À l'autre bout, ResNet-152 non élagué pèse 59,4 Mio et ne tient nulle part : répliqué sur 8 accélérateurs il paie 8 fois le streaming intégral, pour 55 images par seconde et 145 ms, quand un pipeline de 8 étages atteint 141 images par seconde et 36 ms. Le rapport s'est inversé et vaut 2,6 en débit et 4 en latence, cette fois en faveur du pipeline. Le basculement se produit entre les deux cas intermédiaires : à un besoin de 3 accélérateurs, Inception-V4 élagué à 70 \% donne déjà au parallélisme un débit 2 fois supérieur, alors qu'à un besoin de 4, ResNet-101 élagué à 43 \% laisse encore au pipeline un avantage de 1,8 sur cette même grandeur. Le pipeline garde en revanche l'avantage en latence dans les deux cas, ce qui est la signature décrite plus haut.
+
+\paragraph{La règle de déploiement.} Le pipeline n'est donc pas un moyen d'aller plus vite, c'est un moyen de faire tenir un modèle qui ne tient pas. La règle qui s'en déduit est de partitionner le modèle sur le plus petit nombre d'accélérateurs qui supprime le streaming, puis de répliquer ce pipeline autant de fois que la carte le permet. Ce nombre minimal, que l'on appellera le \emph{besoin} du modèle, se lit sur le volume que le compilateur laisse en mémoire externe selon le nombre de segments demandés, un résidu même faible comptant pour un débordement.
+
+Encore faut-il que ce besoin divise 8, sans quoi la réplication laisse des accélérateurs inemployés et la règle ne désigne plus une répartition unique. Les tableaux~\ref{tab:fit_div} et~\ref{tab:fit_nondiv} donnent, de part et d'autre de cette frontière, 4 configurations chacun, choisies pour couvrir des besoins tous différents : 1, 2, 4 et 8 d'un côté, ce qui épuise les diviseurs de 8 ; 3, 5, 7 et au-delà de 8 de l'autre. Les modèles élagués y figurent au même titre que les modèles intacts, le besoin étant une propriété du binaire compilé et non de l'architecture.
+
+\begin{table}[H]
+\centering\scriptsize\setlength{\tabcolsep}{4pt}
+\caption[Configurations dont le besoin divise 8]{Volume laissé en mémoire externe selon le nombre de segments demandés, pour 4 configurations dont le besoin divise 8. La dernière colonne donne la répartition mesurée comme la meilleure, qui est ici celle que la règle désigne sur les 4 lignes.}
+\label{tab:fit_div}
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{lrrrrrrrrrrcc}
+\toprule
+Modèle & Élagage & Taille & \multicolumn{8}{c}{Volume externe (Mio) à $N$ segments} & Besoin & Meilleure \\
+\cmidrule(lr){4-11}
+       & (\%)    & (Mio)  & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & & configuration \\
+\midrule
+BN-Inception & 52 &  5,42 &  0,00 &  0,00 &  0,00 &  0,00 & 0,00 & 0,00 & 0,00 & 0,00 & 1 & $1\times8$ \\
+Inception-V3 & 65 &  8,31 &  4,04 &  0,00 &  0,00 &  0,00 & 0,00 & 0,00 & 0,00 & 0,00 & 2 & $2\times4$ \\
+ResNet-152   & 58 & 25,37 & 20,90 & 13,26 &  5,53 &  0,00 & 0,00 & 0,00 & 0,00 & 0,00 & 4 & $4\times2$ \\
+Inception-V4 & 10 & 37,58 & 33,74 & 27,63 & 21,43 & 14,09 & 7,01 & 1,86 & 0,83 & 0,00 & 8 & $8$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[H]
+\centering\scriptsize\setlength{\tabcolsep}{4pt}
+\caption[Configurations dont le besoin ne divise pas 8]{Mêmes colonnes, pour 4 configurations dont le besoin ne divise pas 8 ou dépasse la plage accessible. Toutes présentent un arbitrage, les 2 dernières colonnes ne désignant pas la même répartition.}
+\label{tab:fit_nondiv}
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{lrrrrrrrrrrccc}
+\toprule
+Modèle & Élagage & Taille & \multicolumn{8}{c}{Volume externe (Mio) à $N$ segments} & Besoin & \multicolumn{2}{c}{Meilleure configuration} \\
+\cmidrule(lr){4-11}\cmidrule(lr){13-14}
+       & (\%)    & (Mio)  & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & & Latence & Débit \\
+\midrule
+ResNet-101          & 58 & 19,08 & 13,79 &  6,15 &  0,00 &  0,00 & 0,00 & 0,00 & 0,00 & 0,00 & 3 & $4\times2$ & $3\times2{+}2$ \\
+Inception-ResNet-V2 & 60 & 22,79 & 20,52 & 12,95 &  5,67 &  1,44 & 0,00 & 0,00 & 0,00 & 0,00 & 5 & $4\times2$ & $5{+}3$ \\
+Inception-ResNet-V2 & 45 & 31,06 & 28,76 & 21,19 & 13,70 &  6,18 & 1,18 & 0,30 & 0,00 & 0,00 & 7 & $8$ & $7{+}1$ \\
+ResNet-101          & -- & 43,88 & 35,91 & 28,36 & 20,79 & 13,27 & 5,47 & 2,03 & 2,03 & 2,03 & $>8$ & $8$ & $6{+}2$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Les statistiques d'ensemble confirment ce que ces 8 lignes donnent à voir. Quand le besoin divise 8, la règle vise juste : sur les 26 modèles concernés, 24 ont une répartition unique qui l'emporte à la fois en latence et en débit. En y ajoutant les 5 modèles qui ne tiennent nulle part, pour lesquels le pipeline complet est la seule option, la règle désigne effectivement la meilleure latence dans 30 cas sur 31 et le meilleur débit dans 26 ; les 6 écarts, un en latence et 5 en débit, tiennent tous à une répartition qui gagne des images par seconde en acceptant un peu de streaming et le paie en latence. Quand le besoin ne divise pas 8, en revanche, la réplication laisse des accélérateurs inemployés et un arbitrage apparaît : sur les 17 modèles concernés, 9 voient la meilleure latence et le meilleur débit relever de répartitions différentes. C'est cette frontière que les 2 tableaux séparent, et l'arbitrage qui en découle fait l'objet de la sous-section suivante.
+
+Le besoin lui-même ne se lit pas sur la taille du modèle, et rapporter l'une à l'autre sur ces 8 lignes ne donne aucune règle simple. Trois effets s'y cumulent. La compilation réagence les poids et les aligne sur la granularité du matériel, ce qui laisse le volume inchangé sur les modèles intacts mais l'augmente de 1,03 Mio en médiane sur les modèles élagués. Le découpage en segments est déséquilibré, si bien que c'est le segment le plus lourd qui décide et non le volume moyen, au point que le volume externe ne décroît pas toujours de manière monotone avec le nombre de segments. Et la mémoire interne loge aussi les tampons d'activation, dont le volume croît avec la résolution d'entrée, ce qui fait tomber le budget réellement disponible pour les poids de 7,19 Mio sur les entrées de $224 \times 224$ à 5,53 sur celles de $299 \times 299$, mécanisme que la sous-section~\ref{sec:tenseurs} mesure directement. Le besoin d'un modèle se mesure donc, il ne se déduit pas.
+
+\subsection{Arbitrage entre répartition et élagage}
+
+Reste la question qui donne son sens à l'axe : combien de latence et de débit achète-t-on en abandonnant de la précision ? Les modèles ont été élagués au critère Taylor, retenu parce que la caractérisation mono-TPU en fait le critère qui préserve le plus d'information au moment même de la sélection, avant toute récupération, tout en restant parmi les mieux classés après, et parce qu'il s'applique sans échec aux deux familles d'architectures du panel, ce qui n'est pas le cas d'OBD-C. Ils ont ensuite été récupérés selon le protocole ImageNet-1k unifié de la section~\ref{sec:entrainement}. Le taux d'élagage n'est pas choisi librement : il est déterminé par la cible de taille, elle-même dictée par le nombre d'accélérateurs sur lesquels le modèle doit tenir.
+
+\paragraph{Les fronts de précision et de performance.} La figure~\ref{fig:pareto_acc} porte l'ensemble des configurations mesurées dans les deux plans qui donnent son sens à l'axe, sur les 3 architectures que le balayage a le plus densément couvertes. Chaque panneau contient de 220 à 242 points, soit tous les taux d'élagage mesurés croisés avec les 22 répartitions, et met en évidence ceux que rien ne domine.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_pareto_acc}
+    \caption[Fronts de Pareto de la précision contre la performance]{Fronts de Pareto de la précision contre la latence, à gauche, et contre le débit, à droite. Un point est un taux d'élagage croisé avec une répartition des 8 accélérateurs ; les gris sont dominés, les colorés forment le front et l'étiquette donne la répartition.}
+    \label{fig:pareto_acc}
+\end{figure}
+
+Trois enseignements s'en dégagent.
+
+\paragraph{Les deux fronts se séparent quand le besoin ne divise pas 8.} Dans chaque rangée, les étiquettes du panneau de gauche et celles du panneau de droite ne coïncident pas partout, et les points où elles divergent sont pour l'essentiel ceux dont le besoin ne divise pas 8, la seule exception étant Inception-ResNet-V2 à 87 \%, dont le résidu de streaming est assez faible pour qu'il vaille mieux le subir que le supprimer. Le front de latence est presque entièrement homogène, $8$ puis $4\times2$, $2\times4$ et $1\times8$ à mesure que la précision baisse, ce qui est la règle du besoin exact suivie de la réplication ; la seule exception est Inception-V4 à 70 \%, dont le besoin vaut 3 et qui n'a donc aucune répartition homogène à sa mesure. Le front de débit, lui, fait apparaître 4 répartitions hétérogènes de plus, $7{+}1$, $5{+}3$, $6{+}1\times2$ et $3\times2{+}1\times2$, toutes à des taux dont le besoin ne divise pas 8.
+
+\paragraph{Le reste s'emploie de trois manières, qui ne se valent pas.} Un modèle dont le besoin vaut $k$ ne mobilise, par réplication, que $\lfloor 8/k \rfloor \times k$ accélérateurs, et il en reste $8 \bmod k$, nul pour $k$ valant 1, 2, 4 ou 8 seulement. Ces accélérateurs surnuméraires peuvent être dispersés en instances d'un seul, groupés en une instance courte, ou absorbés en allongeant les pipelines existants. Ces répartitions n'étant plus homogènes, leurs instances n'ont pas la même latence, et c'est la pire qui est retenue. Les 12 configurations du corpus qui ont un reste à employer, celles dont le besoin vaut 3, 5, 6 ou 7, les départagent nettement. La dispersion est toujours perdante, le groupement lui gagnant 3,3 \% de débit en médiane pour une pire latence inférieure de 41 \%, chaque instance d'un seul accélérateur devant diffuser l'intégralité des poids à chaque inférence. Entre groupement et absorption, en revanche, le choix dépend franchement de l'objectif, et les deux termes sont cette fois du même ordre : le groupement donne 22 \% de débit de plus, l'absorption 32 \% de latence de moins. Ces proportions décrivent le panel mesuré et ne valent pas comme loi générale.
+
+\paragraph{Il y a plus à gagner du côté du débit, et moins à perdre du côté de la latence.} Statistiquement, la meilleure latence est obtenue par une répartition homogène dans 40 des 43 cas, et pour l'essentiel par $8$ ou $4\times2$ sur les modèles lourds, $2\times4$ ou $1\times8$ sur les modèles réduits ; le meilleur débit relève d'une répartition hétérogène dans 12 cas, où le groupement du reste achète des images par seconde. Ces deux réglages ne se valent pourtant pas, et l'arbitrage entre eux est très asymétrique : sur les 11 configurations qui le présentent, choisir la répartition qui minimise la latence coûte 3,9 \% de débit en médiane, quand choisir celle qui maximise le débit coûte 117 \% de latence, et le second terme est le plus grand dans les 11 cas sans exception. Faute de contrainte explicite sur le débit, c'est donc la latence qu'il faut optimiser. La comparaison des deux plans de la figure dit en revanche l'inverse pour ce que rapporte l'élagage : contre la latence, la courbe est plate sur toute sa moitié droite puis s'effondre, passer de 25 à 10 ms sur ResNet-101 ne coûtant que 1,1 point de Top-1 quand descendre à 5,0 ms en coûte 4,4 de plus ; contre le débit, la même donnée montre un rendement décroissant, les premiers doublements étant presque gratuits. Un système qui a besoin de débit a donc bien plus à gagner à l'élagage qu'un système qui a besoin de latence, parce que le débit encaisse en plus la multiplication du nombre d'instances que la réduction de taille rend possible. Les deux lectures ne se contredisent pas : la première porte sur le choix d'une répartition à modèle donné, la seconde sur ce que rapporte la coupe à précision abandonnée égale.
+
+\paragraph{Le prix de la compression.} La figure~\ref{fig:acccomp} donne la précision atteinte en fonction du taux d'élagage, sur les 3 architectures que le balayage a densément mesurées. Les autres n'ont été mesurées qu'à un ou deux taux, ce qui ne suffit pas à en tracer une courbe exploitable.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/panel_precision}
+    \caption[Précision en fonction du taux d'élagage]{Précision Top-1 INT8 en fonction du taux d'élagage atteint, sur les 3 architectures densément couvertes. Le trait horizontal marque la précision du modèle non élagué.}
+    \label{fig:acccomp}
+\end{figure}
+
+Le prix est faible sur une large plage, et du même ordre que celui relevé sur CIFAR-100 pour l'axe mono-TPU. Sur ResNet-101 il est nul jusqu'à 73 \% de paramètres retirés, la courbe passant même légèrement au-dessus de sa référence sur toute cette plage, puis il s'envole : la même architecture perd 3,3 à 4,1 points à 88 \%. Ce gain n'est pas un artefact de mesure, la précision en flottant relevée sur les 50 000 images de validation montrant elle aussi une progression de 0,09 puis 0,13 point jusqu'à 19 \% d'élagage : un élagage modéré agit comme une régularisation sur cette architecture, ce qui est cohérent avec le sur-dimensionnement déjà relevé sur l'axe mono-TPU. Les deux Inception paient plus cher et plus tôt, Inception-V4 perdant déjà 1,5 point à 10 \% d'élagage et 8,9 à 90 \%. Le franchissement qui compte n'est cependant pas un taux mais un seuil de logement : le passage du besoin de 2 accélérateurs au besoin d'un seul est de loin la marche la plus chère, de 4,2 à 5,3 points selon l'architecture, parce que c'est lui qui exige la coupe la plus profonde.
+
+Cette précision a cependant un coût, et il est temporel. La figure~\ref{fig:ft_sweep} donne les trajectoires de récupération des 23 entraînements du balayage, dont la légende rappelle le temps de calcul GPU réellement consommé.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/ft_a2_sweep}
+    \caption[Trajectoires de récupération de l'axe multi-TPU]{Trajectoires de récupération du balayage, un panneau par architecture et une courbe par nombre d'accélérateurs visé. La légende donne, pour chaque courbe, ce nombre puis le taux d'élagage qui en découle et le temps de calcul GPU consommé.}
+    \label{fig:ft_sweep}
+\end{figure}
+
+Toutes atteignent leur plateau, y compris Inception-ResNet-V2 à 95 \% de paramètres retirés, dont la trajectoire progresse encore à la dernière époque mais avec une pente négligeable. Plus la coupe est profonde, plus le point de départ est bas et plus la remontée est longue, la hiérarchie des courbes ne s'inversant jamais au sein d'une architecture. C'est précisément ce qui rend l'opération coûteuse : une configuration demande de 4,3 à 80,9 heures de calcul GPU, soit de quelques heures à plus de 3 jours, et les 23 entraînements du balayage en ont demandé 691 à eux seuls. Le prix de la compression ne se lit donc pas seulement en points de précision perdus, qui sont peu nombreux, mais surtout en jours de calcul, et c'est ce coût qui a imposé de choisir les points mesurés plutôt que de balayer une grille.
+
+Une observation d'ensemble se dégage enfin de tous les modèles mesurés, ResNet comme Inception. À profondeur d'élagage comparable, les architectures résiduelles abandonnent moins de précision : à 57,6 \% de paramètres retirés, ResNet-101 perd 0,57 point sur les 50 000 images de validation quand Inception-V4 en perd 1,59 à 58,6 \% et Inception-ResNet-V2 1,64 à 60,3 \%, soit un rapport voisin de 2,8 qui se resserre puis s'annule au-delà de 85 \%. Deux explications sont plausibles et les mesures ne permettent pas de les départager : les connexions résiduelles produisent des représentations redondantes et distribuées, dont on sait qu'elles tolèrent mieux le retrait de canaux, quand les modules à branches parallèles concentrent la fonction de chaque branche ; ou bien il s'agit d'une interaction avec le critère, tous ces modèles ayant été élagués au seul critère Taylor. Trancher demanderait de rejouer les mêmes configurations avec un critère de nature différente, ce que le chapitre~\ref{chap:perspectives} retient comme prolongement.
+
+\subsection{Influence de la taille des tenseurs}
+\label{sec:tenseurs}
+
+La règle de déploiement établie plus haut ne fait intervenir que le volume des poids. Reste à savoir si autre chose pèse dans la balance entre latence et débit, et le premier candidat est la taille des tenseurs, dont la sous-section précédente a montré qu'elle occupe une part de la mémoire interne. Elle intervient a priori deux fois : elle consomme de la SRAM, donc elle augmente le besoin du modèle, et elle rend plus coûteuse chaque frontière de segment, puisque l'activation transmise d'un étage au suivant transite par l'hôte. Ces deux effets tirent dans des sens opposés sur le nombre d'accélérateurs à mobiliser, et il devrait exister un régime où le second l'emporte. Aucune paire d'architectures réelles ne permet de les séparer, les modèles du panel différant sur tout à la fois. Le corpus synthétique le permet, en balayant la résolution d'entrée d'un modèle par ailleurs fixe. La figure~\ref{fig:latency_vs_n} donne la latence obtenue en fonction du nombre d'étages, une courbe par résolution.
+
+\begin{figure}[H]
+    \centering
+    \input{figs/single_latency_ntpu}
+    \caption[Latence contre nombre d'accélérateurs, par résolution d'entrée]{Latence médiane par échantillon en fonction du nombre d'accélérateurs en pipeline, pour un même modèle synthétique de 26 Mio dont seule la résolution d'entrée varie de 96 à 768 pixels.}
+    \label{fig:latency_vs_n}
+\end{figure}
+
+Le premier effet est le plus net, et il est considérable. À un seul accélérateur, le compilateur loge 7,71 Mio de poids en mémoire interne lorsque l'entrée fait 96 pixels de côté, et seulement 3,91 lorsqu'elle en fait 768, pour exactement les mêmes poids : les tampons d'activation confisquent près de la moitié de la SRAM. Le volume laissé en mémoire externe monte en conséquence de 16,72 à 20,81 Mio, et le besoin du modèle passe de 4 accélérateurs à 96 pixels à 7 à 768. C'est ce qui explique la hiérarchie des courbes : à nombre d'étages donné, une courbe haute résolution est plus haute non seulement parce qu'elle calcule davantage, mais parce qu'elle streame encore quand les autres ont fini de le faire.
+
+Le second effet se mesure aussi, mais il reste minoritaire. Le surcoût d'une frontière de segment passe d'environ 0,2 ms lorsque l'activation transmise pèse 18 kio à environ 2,8 ms lorsqu'elle en pèse 1152, soit moins d'une milliseconde cumulée à la plus petite résolution contre 8 à la plus grande. Une régression conduite à résolution fixée, où la latence est expliquée par le volume externe et le nombre de segments, sépare proprement les deux termes avec un coefficient de détermination supérieur à 0,99. Ce surcoût reste inférieur au prix du streaming qu'il évite, que la même régression chiffre à 2,5 ms par mébioctet, tant qu'il reste du volume résiduel en quantité ; les deux termes se croisent sur les derniers segments. À 768 pixels, la latence tombe de 99,8 ms à un seul étage à 68,4 ms à 6 étages, où il reste 0,46 Mio en mémoire externe ; le 7\textsuperscript{e} étage supprime ce résidu sans rien gagner, à 68,9 ms, et le 8\textsuperscript{e} coûte 5,6 ms de plus.
+
+La conclusion est double. D'abord, la taille des tenseurs ne renverse pas la règle de déploiement. Le renversement qu'on pouvait attendre est celui où la communication ajoutée par une frontière de segment coûterait plus cher que le streaming qu'elle supprime, au point qu'une configuration parallèle qui streame batte un pipeline qui tient. Rapporté au pipeline entier, il ne se produit nulle part sur l'étendue mesurée : partitionner reste largement gagnant. Rapporté au dernier segment, en revanche, il se produit bel et bien, puisque le volume résiduel à supprimer y est devenu très faible : l'optimum de latence précède d'un ou deux segments le point de tenue complète aux plus grandes résolutions. C'est un point d'arrêt qu'un algorithme de partitionnement peut viser directement, celui où l'économie marginale de streaming cesse de dépasser le coût marginal de communication. Le domaine exploré reste par ailleurs borné par le compilateur lui-même, qui refuse ce modèle de 26 Mio au-delà de 768 pixels sur une erreur de tenseurs d'activation trop volumineux : rien n'est donc établi sur les résolutions supérieures.
+
+Ensuite, la taille des tenseurs déplace le besoin, et c'est là qu'elle compte pour le déploiement : à résolution élevée, le nombre d'accélérateurs qui supprime le streaming n'est plus celui que la taille du fichier laisse attendre, et il faut le mesurer.
+
+\paragraph{Réserves.} Deux limites accompagnent la lecture de ces résultats. La première tient à la détermination du budget de récupération. Le taux d'élagage réellement atteint diffère parfois beaucoup du taux prédit avant l'opération, l'élagage structuré retirant des groupes entiers dont la taille dépend du graphe de dépendances et non du seul objectif visé ; caler le budget d'époques sur le taux prédit conduit alors à sous-entraîner les coupes les plus profondes. Le budget doit impérativement être fixé d'après le taux atteint, ce que fait le protocole de la section~\ref{sec:entrainement} ; 3 configurations du corpus, produites avant ce correctif, en portent encore la trace et sont signalées en section~\ref{sec:conditions}. La seconde est le critère unique : tous les modèles de l'axe multi-TPU ont été élagués au critère Taylor, ce qui interdit d'attribuer avec certitude à l'architecture l'écart de robustesse relevé entre familles.
+
+\subsection{Conclusion de l'analyse multi-TPU}
+
+Quatre conclusions se dégagent. D'abord, le déploiement se ramène à une règle simple : partitionner le modèle sur le plus petit nombre d'accélérateurs qui supprime le streaming, puis répliquer ce pipeline autant de fois que la carte le permet. Quand ce nombre divise 8, la répartition ainsi obtenue domine la latence et le débit à la fois dans 24 des 26 cas mesurés : il n'y a rien à arbitrer.
+
+Ensuite, et c'est le résultat le plus directement exploitable de cet axe, l'arbitrage qui subsiste dans les autres cas est très asymétrique. Sur les 11 configurations concernées, choisir la répartition qui minimise la latence coûte 3,9 \% de débit en médiane, quand choisir celle qui maximise le débit coûte 117 \% de latence, et le second terme est le plus grand dans les 11 cas sans exception. Il s'en déduit une règle par défaut qui ne demande aucune mesure supplémentaire : faute de contrainte explicite sur le débit, optimiser la latence, qui ne coûte presque rien à l'autre grandeur là où l'inverse la double.
+
+Puis, le pipeline n'est pas un moyen d'accélérer mais un moyen de faire tenir, et la taille des tenseurs d'entrée ne renverse pas ce constat : elle déplace en revanche le besoin du modèle, en confisquant une part de la mémoire interne qui va croissant avec la résolution. L'élagage vaut donc ici doublement, puisqu'il réduit le travail par échantillon et qu'il libère des accélérateurs.
+
+Enfin, ce que l'élagage achète n'est pas de même ampleur sur les deux grandeurs : à précision abandonnée égale, le gain en débit dépasse le gain en latence, parce que lui seul profite de la multiplication des instances. Cela ne contredit pas la règle par défaut énoncée plus haut, qui porte sur le choix d'une répartition à modèle donné et non sur ce que rapporte la coupe. La précision, elle, se maintient aussi bien sur ImageNet-1k que sur CIFAR-100, mais au prix de plusieurs jours de calcul GPU par configuration, et à profondeur d'élagage comparable les architectures résiduelles en abandonnent 2 à 3 fois moins que les Inception aux taux modérés. Ce dernier point est le plus fragile des quatre, et le prolongement qui l'établirait est identifié au chapitre~\ref{chap:perspectives}.
+
+% =====================================================================
+%  CHAPITRE 6 - PERSPECTIVES
+% =====================================================================
+\chapter{Perspectives}
+\label{chap:perspectives}
+
+\section{Élagage informé par le matériel}
+
+Cette section rend compte d'une piste explorée en début de stage puis abandonnée, dont le constat motivant est resté valable et éclaire les résultats du chapitre~\ref{chap:resultats}. L'élagage structuré réduit effectivement la taille du modèle, mais rien ne garantit que chaque groupe de paramètres retiré se traduise par un gain de latence. Sur un réseau systolique, ce qui détermine le temps d'exécution d'une couche est le nombre de passes nécessaires sur la grille de calcul, et non le nombre de paramètres pris isolément ; l'élagage ne réduit ce nombre qu'indirectement, lorsqu'il fait franchir à la largeur d'une couche un multiple de la dimension de la grille. Entre deux de ces franchissements, retirer des filtres coûte de la précision sans rien rapporter en latence.
+
+Le comportement observé est cohérent avec une grille de $64 \times 64$ éléments de traitement. Une grille de cette forme pave les deux dimensions de la multiplication matricielle et prédit un escalier aussi bien sur la largeur d'entrée d'une couche que sur son nombre de neurones de sortie. Seule la seconde a été balayée : en faisant varier le nombre de neurones d'une couche entièrement connectée, la latence progresse effectivement par marches, avec un palier tous les 64 neurones. Dès que l'on change de type de connexion, en revanche, les marches se raccourcissent et perdent leur régularité, ce qui indique que le placement effectif des calculs résulte d'une interaction plus complexe entre le matériel et le compilateur que ce modèle simple ne le laisse attendre.
+
+La suite logique aurait été un élagage informé par le matériel, contraignant les largeurs de couche à tomber sur les valeurs qui font effectivement chuter le nombre de passes. Cette piste a été abandonnée sur un arbitrage chiffré : établir le modèle de placement pour tous les types de couches aurait demandé une rétro-ingénierie considérable sur un compilateur fermé et non documenté, alors qu'aligner les largeurs ne rapporte que ce que rapporte la pente à l'intérieur d'un régime mémoire donné, là où le seul franchissement du seuil de mémoire interne divise la latence par 2,7 en médiane sur le panel de l'axe mono-TPU, et jusqu'à 6 (section~\ref{sec:res_mono}). La priorité a donc été donnée à la caractérisation empirique qui constitue le corps de ce rapport.
+
+Le constat, lui, n'a pas été perdu, à condition de ne pas le confondre avec le seuil de 8 Mio du chapitre~\ref{chap:resultats}. Ce sont deux non-linéarités distinctes : l'escalier de 64 est une granularité de calcul, celle du pavage de la grille systolique, tandis que le seuil de 8 Mio est une limite de capacité mémoire. Elles pointent en revanche dans la même direction, et c'est ce qui les rend intéressantes ensemble : le nombre de paramètres est un mauvais indicateur de la latence sur cet accélérateur, et il l'est pour deux raisons indépendantes dont les effets se cumulent.
+
+% [OPTIONNEL] Si le graphe des marches d'escalier (latence en fonction du nombre
+% de neurones d'une couche dense) est retrouvé, l'insérer ici : il illustre
+% directement le paragraphe sur la grille 64x64.
+
+\section{Équilibrage du pipeline}
+
+La principale limite du dispositif multi-TPU tient à ce que le découpage en segments a été intégralement délégué au compilateur Edge TPU, sur lequel on n'a d'autre prise que le nombre de segments demandés. Deux symptômes en découlent. Le premier est que la tenue en mémoire interne n'est pas ce que la segmentation optimise : le volume de transfert externe résiduel de ResNet-101 non élagué plafonne à la même valeur de 6 à 8 segments, et il n'est même pas monotone, le checkpoint conçu pour 6 accélérateurs y logeant, débordant de 2,02 Mio à 7 et logeant de nouveau à 8. Ajouter un segment peut donc dégrader la tenue, ce qui interdit toute recherche du besoin par simple croissance de $N$. Le second est que rien ne garantit que les segments soient équilibrés en temps de calcul, alors que le débit d'un pipeline est déterminé par son étage le plus lent.
+
+La direction naturelle est de reprendre la main sur ce placement. Les travaux d'équilibrage automatique de pipeline, dont SAPar, formulent le choix des coupures comme un problème d'optimisation sous contrainte de mémoire par étage, ce que la segmentation par nombre de segments ne fait pas. Les mesures produites ici fournissent les deux paramètres dont un tel modèle de coût a besoin : 2,76 ms par mébioctet transféré depuis la mémoire externe sur le bus PCIe, valeur ajustée en régime établi sur 410 modèles avec $R^2 = 0{,}9996$, et de 0,2 à 2,8 ms de communication par frontière de segment, cette dernière valeur croissant avec la taille du tenseur transmis.
+
+\section{Portée du modèle de latence}
+\label{sec:persp_modele}
+
+Le modèle de latence de la section~\ref{sec:res_mono} repose sur trois grandeurs, dont les deux qui portent l'explication du seuil sont mesurées avec une précision qui ne laisse guère place au doute. Deux questions restent néanmoins ouvertes, et elles portent l'une et l'autre sur la portée du modèle plutôt que sur sa validité.
+
+\paragraph{Le coefficient de transfert dépend de l'hôte autant que du lien.} La comparaison faite au chapitre précédent attribue 16 \% d'écart au passage du bus USB au bus PCIe, mais les deux plateformes changent d'hôte en même temps que de lien, la première étant une Raspberry Pi 4 et la seconde une station x86. Une troisième mesure permet de les départager : le même accélérateur USB et les mêmes 241 binaires logés en mémoire interne, rejoués sur une station x86, donnent un chargement initial à 2,32 ms par mébioctet contre 3,29 sur la Raspberry Pi. Changer d'hôte à lien constant déplace donc la grandeur de 30 \%, davantage que les 16 \% attribués plus haut au changement de bus, qui portaient en réalité sur un changement simultané d'hôte et de lien. Le tableau montre même que le classement des deux liens s'inverse à hôte constant, la station x86 chargeant plus vite par son port USB, à 2,32 ms par mébioctet, que par sa carte PCIe, à 2,80. Le tableau~\ref{tab:kplateformes} rassemble ces relevés, tous obtenus par la même méthode et sur le même corpus.
+
+\begin{table}[H]
+\centering\small
+\caption[Coefficient de transfert selon la plateforme]{Coefficient de transfert mesuré sur 3 couples hôte et lien, par la soustraction de première inférence appliquée aux mêmes 241 modèles logés en mémoire interne. La dernière ligne rappelle la valeur publiée par Gao, Choi et Wang, obtenue par transfert direct de tenseurs et non par inférence.}
+\label{tab:kplateformes}
+\begin{tabular}{llrr}
+\toprule
+Hôte & Lien & $k$ (ms/Mio) & Débit (Mio/s) \\
+\midrule
+Raspberry Pi 4 & Coral USB   & 3,29 & 304 \\
+Station x86    & Carte PCIe  & 2,80 & 357 \\
+Station x86    & Coral USB   & 2,32 & 432 \\
+\midrule
+\multicolumn{2}{l}{Raspberry Pi 5, Coral USB \cite{gaoWorkInProgressModeling2025}} & & 340 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Le classement obtenu est mécaniquement cohérent. L'USB 3.0 de la Raspberry Pi 4 ne dispose pas d'un contrôleur natif : il passe par un pont relié au processeur par une unique voie PCIe de deuxième génération, partagée avec l'interface réseau, ce qui le plafonne bien en dessous du débit nominal du protocole. Les deux stations x86 n'ont pas cette contrainte, et la valeur relevée sur Raspberry Pi 5 se place entre les deux, position attendue pour une machine dont le chemin vers les périphériques a été refait.
+
+L'interprétation à retenir est que $k$ mesure le chemin de données de bout en bout, contrôleur de l'hôte compris, et non le protocole du lien pris isolément. Il s'agit donc bien d'une constante de plateforme, à condition d'entendre par plateforme le couple formé par l'hôte et le lien, et il faut la recalibrer pour chaque nouveau déploiement. Le coût en est faible, ce qui rend la remarque exploitable plutôt que gênante : quelques minutes de mesure de première inférence sur une poignée de modèles de tailles échelonnées suffisent. La structure du modèle, elle, ne change pas d'une plateforme à l'autre, et c'est elle qui porte le résultat.
+
+\paragraph{Le recouvrement entre calcul et chargement n'est établi que sur un bus.} La latence de première inférence n'est pas exactement la somme des termes du modèle : une partie du chargement initial est masquée par le calcul des couches déjà chargées. Ce recouvrement est établi sur le bus PCIe, où deux corpus sans rien de commun s'accordent, à $0{,}58 \pm 0{,}06$ fois le temps de calcul sur les réseaux synthétiques et $0{,}63 \pm 0{,}04$ sur les modèles élagués, mais pas sur le bus USB, où les deux mêmes corpus donnent $0{,}42 \pm 0{,}05$ et $0{,}16 \pm 0{,}07$, valeurs statistiquement incompatibles.
+
+L'explication tient vraisemblablement à l'identifiabilité de ce terme, qui ne se sépare du coût fixe que si le temps de calcul varie beaucoup et indépendamment du volume interne. C'est le cas des réseaux synthétiques, dont le temps de calcul couvre un facteur 29 pour une corrélation de 0,15 avec le volume interne, et ce ne l'est pas des modèles élagués, où le facteur tombe à 4,4 pour une corrélation de 0,59, l'élagage réduisant conjointement les poids et le calcul. Le second corpus est donc mal placé pour estimer ce terme, sans que cet argument suffise à clore la question, puisque le test formel rejette malgré tout chacune des deux valeurs sur les données de l'autre.
+
+Trancher demanderait un corpus mesuré sur USB et conçu pour cela : des modèles couvrant un ordre de grandeur en temps de calcul à volume interne constant, ce qu'un balayage en résolution d'entrée produit naturellement. Le corpus synthétique s'y prête et une campagne d'une heure suffirait. L'enjeu reste cependant limité : ce terme n'affecte que la première inférence, de 1 à 2 millisecondes sur ce panel, et imposer l'une ou l'autre valeur candidate déplace le coefficient de transfert de 1 \%.
+
+\section{Limites et prolongements}
+
+\textbf{Graine unique.} La part de variabilité due à l'aléa d'entraînement n'est pas quantifiée ; rejouer un sous-ensemble représentatif avec deux graines supplémentaires permettrait de la borner. \textbf{Critère unique sur l'axe multi-TPU.} La comparaison entre familles architecturales repose sur Taylor seul ; rejouer les mêmes configurations avec un critère de magnitude, qui n'utilise pas de gradient, dirait si l'écart de robustesse observé est bien architectural. \textbf{Une tâche unique.} L'étude ne couvre que la classification d'images, et la transposition des classements à une tâche de détection reste à établir. \textbf{Un corpus par bus.} Le croisement a été fait pour l'axe mono-TPU, dont les modèles ont été mesurés sur les deux bus ; il reste à le faire pour le second, dont les modèles ImageNet-1k n'ont jamais été mesurés sur l'accélérateur USB, alors que rien ne garantit que le coefficient établi sur des modèles CIFAR-100 vaille pour des entrées de $224 \times 224$.
+
+% =====================================================================
+%  CHAPITRE 7 - CONCLUSION
+% =====================================================================
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+Ce rapport rend compte des travaux réalisés au cours d'un stage de 6 mois consacré à l'étude des compromis entre latence, précision et débit sur Edge TPU, à travers deux axes complémentaires d'optimisation logicielle, par compression de modèles, et matérielle, par utilisation conjointe de plusieurs accélérateurs. Les apports principaux sont un framework de mesure automatisé couvrant la chaîne complète et un article présenté en conférence internationale.
+
+De l'axe mono-TPU il ressort que la latence sur cet accélérateur obéit à un seuil et non à une pente, le franchissement de la capacité de la mémoire interne la divisant par 2,7 en médiane, qu'un modèle à deux régimes en rend compte à partir du seul volume laissé en mémoire externe et d'un coût de transfert mesuré à 3,3 ms par mébioctet, et qu'au-delà de ce seuil le choix d'un critère d'élagage devient un arbitrage explicite entre précision et latence, qu'aucun critère ne domine.
+
+Du second, que le meilleur point de fonctionnement est celui qui tient en mémoire interne avec le moins d'accélérateurs par instance, que le pipeline n'est utile que comme moyen de faire tenir un modèle trop gros, que l'arbitrage résiduel entre latence et débit est assez asymétrique pour se trancher par défaut en faveur de la latence, et que le taux de change entre précision perdue et performance gagnée est plus avantageux du côté du débit que du côté de la latence.
+
+Plus personnellement, ce stage a été plutôt intense en raison du volume de notions à m'approprier (état de l'art du pruning, fonctionnement interne d'un accélérateur peu documenté, chaîne de conversion multi-frameworks, infrastructure de calcul scientifique), mais cette diversité est précisément ce qui le rend intéressant. La perspective d'apporter un regard de systèmes embarqués à un domaine dominé par les communautés IA et logicielles me semble être une contribution utile, que je compte exploiter dans la suite de mon parcours.
+
+% =====================================================================
+%  TABLE DES ACRONYMES
+% =====================================================================
+
+
+% =====================================================================
+%  ANNEXES
+% =====================================================================
+
+\appendix
+\chapter*{Table des acronymes}
+\addcontentsline{toc}{chapter}{Table des acronymes}
+\thispagestyle{plain}
+
+\begin{longtable}{@{}l>{\raggedright\arraybackslash}p{0.78\linewidth}@{}}
+\toprule
+\textbf{Sigle} & \textbf{Signification} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Sigle} & \textbf{Signification} \\
+\midrule
+\endhead
+BN        & \emph{Batch Normalization} : normalisation par lot \\
+CNN       & \emph{Convolutional Neural Network} : réseau de neurones convolutif \\
+CPU       & \emph{Central Processing Unit} : processeur généraliste \\
+DSD       & \emph{Digital System Design} : conférence Euromicro sur la conception des systèmes numériques \\
+FP32      & Représentation en virgule flottante sur 32 bits \\
+FPGM      & \emph{Filter Pruning via Geometric Median} : critère d'élagage par médiane géométrique \\
+GPU       & \emph{Graphics Processing Unit} : processeur graphique \\
+INT8      & Représentation en entiers signés sur 8 bits \\
+LAAS      & Laboratoire d'Analyse et d'Architecture des Systèmes \\
+LIRIS     & Laboratoire d'InfoRmatique en Image et Systèmes d'information \\
+MAC       & \emph{Multiply-Accumulate} : opération de multiplication-accumulation \\
+Mio       & Mébioctet, soit $2^{20}$ octets (à distinguer du mégaoctet, $10^{6}$ octets) \\
+OBD-C     & \emph{Optimal Brain Damage}, variante à information de Fisher factorisée par couche \\
+ONNX      & \emph{Open Neural Network Exchange} : format d'échange de graphes de calcul \\
+PCIe      & \emph{Peripheral Component Interconnect Express} : bus d'extension \\
+PE        & \emph{Processing Element} : élément de traitement d'un réseau systolique \\
+RAM       & \emph{Random Access Memory} : mémoire vive \\
+RISC      & Réseaux, Informatique et Systèmes de Confiance : département du LAAS-CNRS \\
+SIMD      & \emph{Single Instruction, Multiple Data} : une instruction, plusieurs données \\
+SLURM     & \emph{Simple Linux Utility for Resource Management} : gestionnaire de tâches du cluster \\
+SRAM      & \emph{Static Random Access Memory} : mémoire vive statique, ici la mémoire interne du TPU \\
+TFLite    & TensorFlow Lite : format de modèle destiné à l'inférence embarquée \\
+TOPS      & \emph{Tera-Operations Per Second} : téra-opérations par seconde \\
+TPU       & \emph{Tensor Processing Unit} : accélérateur de réseaux de neurones de Google \\
+USB       & \emph{Universal Serial Bus} \\
+WRN       & \emph{Wide Residual Network} : réseau résiduel élargi \\
+\bottomrule
+\end{longtable}
+
+\input{figs/annexe_tables}
+
+\input{figs/annexe_multitpu}
+
+% =====================================================================
+%  BIBLIOGRAPHIE
+% =====================================================================
+
+\printbibliography
+
+
+
+\end{document}
+
+% =====================================================================
+%  ENTRÉE BIBLIOGRAPHIQUE À AJOUTER DANS reference.bib
+% =====================================================================
+% @inproceedings{zouhdiPruningDeepNeural2026,
+%   author    = {Zouhdi, Mouad and Guo, Jiahe and Hammadi, Rafik and Sun, Binqi
+%                and Leleux, Philippe and K{\l}oda, Tomasz and Caccamo, Marco},
+%   title     = {Pruning of Deep Neural Networks for Real-Time Execution on Edge TPU},
+%   booktitle = {2026 29th Euromicro Conference on Digital System Design (DSD)},
+%   year      = {2026},
+%   address   = {Cracovie, Pologne},
+% }
+%
+% Vérifier le numéro d'édition de la conférence et compléter pages/DOI
+% une fois les actes publiés.

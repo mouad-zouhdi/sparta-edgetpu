@@ -210,6 +210,60 @@
         "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/hetero_sweepN.csv"
       ],
       "dest": "axis2_imagenet/measurements"
+    },
+    "axis2 measurements (final partition grid, fixed inference count)": {
+      "_comment": "The campaign the published results rest on: 43 checkpoints x 22 partitions of eight accelerators, a fixed inference count per configuration rather than a fixed time window. It supersedes the partitions_sweepN files for every figure, and accuracy_vs_tpu.csv is its synthesis, one row per checkpoint. Kept alongside rather than replacing, because the earlier grid has ten passes and therefore the error bars this one cannot give.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_fixedn.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_fixedn_par_config.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_fixedn_par_instance.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/segment_metadata_fixedn.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/partitions_fixedn.log",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/accuracy_v2_5000.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/accuracy_v2.csv",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results/H_accuracy_vs_tpu/accuracy_vs_tpu.csv"
+      ],
+      "dest": "axis2_imagenet/measurements"
+    },
+    "axis2 measurements (raw per-configuration timings)": {
+      "_comment": "One .npz per (pass, checkpoint, partition) holding the individual inference times behind every aggregate above. 29 MB for 946 files, and the only way to recompute a distribution rather than a mean.",
+      "patterns": [
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_bench/results_raw/raw_fixedn/*/*.npz"
+      ],
+      "dest": "axis2_imagenet/measurements/raw_fixedn",
+      "keep_parent": true
+    },
+    "axis1 cold start (seven baselines)": {
+      "_comment": "The warm-up curve measured by 05_benchmark_coldstart.py: K passes x N inferences on the same interpreter, so position 1 is the cold first inference and 2..N the heating slope. It is the campaign the fixed cost c of the latency model comes from.",
+      "patterns": [
+        "/home/a131/Desktop/results/cold_start_results.json",
+        "/home/a131/Desktop/results/cold_start_results.csv"
+      ],
+      "dest": "measurements"
+    },
+    "axis1 compile logs (per model)": {
+      "_comment": "The edgetpu_compiler output for each of the 410 compiled axis-1 models, one log per model. compiler_metrics.json in axis1_cifar100/logs aggregates them; these are the raw text they were parsed from.",
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/edgetpu_compiled/*.log"
+      ],
+      "dest": "axis1_cifar100/compile_logs"
+    },
+    "run logs (provenance)": {
+      "_comment": "Scheduler logs of the runs that produced the models: pruning and fine-tuning on the cluster for axis 1, the ImageNet campaigns for axis 2, and the extra compilations. They prove what actually ran and with which options, which no aggregated file records.",
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/logs/*.log",
+        "/home/a131/Desktop/Project/multi_tpu/models/wave_logs/*.log",
+        "/home/a131/Desktop/Project/archive/cluster_logs/*.log"
+      ],
+      "dest": "provenance_logs"
+    },
+    "archive: efficientnet-lite0 on Imagenette (superseded campaign)": {
+      "_comment": "An early campaign, 5 rates x 5 criteria on efficientnet_lite0 over Imagenette, ten classes, by transfer learning. It is NOT comparable with axis 1: different dataset, protocol, resolution and criterion names, and no result of the study rests on it. Published for completeness only. Its float32 intermediates are left out, being regenerable.",
+      "patterns": [
+        "/home/a131/Desktop/Project/data/models/clusterV1_efficientnet_lite0/pytorch_pruned/*",
+        "/home/a131/Desktop/Project/data/models/clusterV1_efficientnet_lite0/tflite_int8/*"
+      ],
+      "dest": "archive_imagenette_efficientnet_lite0"
     }
   }
 }

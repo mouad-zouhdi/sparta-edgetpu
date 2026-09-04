@@ -1,0 +1,51 @@
+% genere a la main : annexe des tables de benchmark completes.
+% Les fragments viennent de work/final_tables_and_plots/tables/, francises par
+% make_annexe_tables.py qui en depose des copies dans figs/tables/.
+% Chaque table par modele occupe une page ; d'ou leur renvoi en annexe.
+
+\chapter{Tables de benchmark complètes}
+\label{ann:tables}
+
+Cette annexe rassemble les mesures détaillées de l'axe mono-TPU, trop
+volumineuses pour figurer dans le corps du chapitre~\ref{chap:resultats}. Les
+tables~\ref{tab:baseline-speedup} et~\ref{tab:quant-speedup} portent sur les
+modèles de référence non élagués ; les suivantes donnent, pour chacune des 7
+architectures, le détail par taux d'élagage et par critère d'importance.
+
+Les colonnes reprennent les grandeurs définies en section~\ref{sec:metriques} :
+précision INT8 mesurée sur l'accélérateur et son écart à la référence, latence
+Edge TPU, accélérations rapportées au modèle non élagué et au processeur,
+réductions réelles du nombre de paramètres et des opérations, et répartition du
+modèle entre mémoire interne et mémoire externe telle que la rapporte le
+compilateur.
+
+\section{Modèles de référence}
+
+{\footnotesize
+\input{figs/tables/baseline_speedup}
+\input{figs/tables/quant_speedup}
+}
+
+\clearpage
+\section{Détail par architecture}
+
+\renewcommand{\benchscale}{0.70}
+\input{figs/tables/resnet18}
+\clearpage
+\renewcommand{\benchscale}{0.70}
+\input{figs/tables/resnet50}
+\clearpage
+\renewcommand{\benchscale}{0.78}
+\input{figs/tables/vgg19}
+\clearpage
+\renewcommand{\benchscale}{0.72}
+\input{figs/tables/wrn_28_10}
+\clearpage
+\renewcommand{\benchscale}{0.82}
+\input{figs/tables/mobilenetv2}
+\clearpage
+\renewcommand{\benchscale}{0.70}
+\input{figs/tables/googlenet}
+\clearpage
+\renewcommand{\benchscale}{0.88}
+\input{figs/tables/squeezenet1_1}

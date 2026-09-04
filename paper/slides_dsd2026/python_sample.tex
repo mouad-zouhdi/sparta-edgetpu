@@ -1,0 +1,98 @@
+\hspace*{-0.5cm}
+% \begin{center}
+ \begin{minipage}{.5\textwidth}
+  \includegraphics[width=5.7cm,height=1.8cm]{packages_etdl.pdf}
+ \vspace{0.0cm}
+ \hspace*{-1cm}\begin{block}{\centering D\'{e}tails}
+  \begin{itemize}[leftmargin=0cm]
+  \item  \'{e}crit en Python
+  \item  strucutres de donn\'{e}es pour \mbox{E-TDL}
+  \item  analyse d'ordonnan\c{c}abilit\'{e}
+  \item  documentation, exemples
+ \end{itemize}
+ \end{block}
+
+ \end{minipage}
+ \begin{minipage}{.02\textwidth}
+ $ $
+ \end{minipage}
+ \begin{minipage}{.45\textwidth}
+%  \begin{adjustbox}{width=6cm,height=8cm,keepaspectratio}
+\begin{tikzpicture}
+\node[xscale=0.17,yscale=0.265] at (0,0){
+  \begin{python}
+  def get_offsets(Modules):
+        """ Find all possible offsets separating the most recent start instants
+            of all concurrently running modes that belong to the Modules (assuming that ode m_1 starts at instant 0)
+            Returns off_confs and sync_confs; 
+            off_confs is a dictionary where keys are concurrently running modes (m_1,...,m_n) 
+            and corresponding value is a set of all possible offsets (delta_2,...,delta_n); 
+            sync_confs is a set of all parallel modes that can start at any time instant (no correlation between them) """
+
+        off_confs=defaultdict(set)
+        sync_confs=set()
+
+        # for every mode set its paths gcds
+        for M in Modules:
+                M.paths=gcd_traversal(M)
+
+        # find all possible parallel modes (m_1,..,m_n) such that m_i \in M_i 
+        p_modes = [ p_m for p_m in itertools.product(*[ [ m.mode_id for m in M.modes ] for M in Modules ])]
+
+        # p_paths[p_m]=[P1,...,Pz] where P_i will be a list of paths' gcds leading to the parallel modes p_m
+        p_paths=dict()
+
+        # for every tuple of parallel modes p_m=(m_1,...,m_n) get the list p_paths[p_m] (parallel paths) 
+        # containing lists of the form P=[gcd_1,...,gcd_n] such that gcd_i=gcd(p_i) and tail(p_i)=m_i for all p_i in p_m
+        # each of these modes may be reached by the different paths (thus we compute a cartesian product) 
+        for p_m in p_modes:
+                gcds = [ list(M.paths[mode_id]) for (mode_id,M) in zip(p_m,Modules) ]
+                p_paths[p_m]=[tuple(P) for P in itertools.product(*gcds)]
+
+        # for every possible tuple of concurrently running modes:
+        for p_m in p_modes:
+                # check if modes can start at any possible time instant
+                if any(is_sync_configuration(P) for P in p_paths[p_m]):
+                        sync_confs.add(p_m)
+                        continue
+
+                # get periods of all modes in p_m
+                T = [ M.search_mode(mode_id).period for (mode_id,M) in zip(p_m,Modules) ]
+                # for every set of parallel paths leading to the concurrently running modes p_m
+                for P in p_paths[p_m]:
+                        # find offsets coefficients for m_1 and m_2
+                        K=find_all_start_confs(P,T)
+                        # calculate offsets: from coefficients alpha to time units
+                        off_confs[p_m] |= calculate_offsets(P,K)
+
+        return off_confs,sync_confs
+
+ \end{python}
+ };
+ \end{tikzpicture}
+ 
+ 
+%  }
+%  \end{adjustbox}
+
+%   \includegraphics[width=6cm,height=7cm,scale=0.8]{etdl_code2}
+ \end{minipage}
+
+
+% 
+%  \includegraphics[scale=0.7]{packages_etdl.pdf}
+%  \vspace{0.7cm}
+%  \begin{block}{Implementation details}
+%  \begin{minipage}{.5\textwidth}
+%  \begin{itemize}
+%   \item  written in Python
+%   \item  data structures for E-TDL
+%   \item  algorithms for schedulability analysis
+%   \item  documentation, examples
+%  \end{itemize}
+%  \end{minipage}
+% \begin{minipage}{.45\textwidth}
+% \includegraphics[scale=0.11]{etdl_code2}
+%  \end{minipage}
+%  \end{block}
+% \end{center}

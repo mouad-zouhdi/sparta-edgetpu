@@ -1,0 +1,50 @@
+% genere par make_accloss.py, ne pas editer a la main
+\definecolor{modbni}{HTML}{17BECF}
+\definecolor{modiv3}{HTML}{BCBD22}
+\definecolor{modr50}{HTML}{1F77B4}
+\definecolor{modr152}{HTML}{9467BD}
+\definecolor{accblue}{HTML}{2A78D6}
+
+\setlength{\tabcolsep}{0pt}
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{@{}ccc@{}}
+  \begin{tikzpicture}
+\begin{axis}[width=4.0cm, height=2.9cm, scale only axis,
+  title={ResNet-101}, title style={font=\scriptsize},
+  xlabel={Taux d'élagage (\%)},
+  ylabel={Précision Top-1 INT8 (\%)},
+  xmin=0, xmax=100,
+  ymin=69.38, ymax=77.24,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[dashed, black, thin] coordinates {(0,74.66) (100,74.66)};
+\addplot[color=accblue, mark=*, mark size=1.5pt, line width=0.9pt] table[x=pct, y=top1, col sep=comma] {figs/data/acccomp_resnet101.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=4.0cm, height=2.9cm, scale only axis,
+  title={Inception-V4}, title style={font=\scriptsize},
+  xlabel={Taux d'élagage (\%)},
+  xmin=0, xmax=100,
+  ymin=68.84, ymax=81.48,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[dashed, black, thin] coordinates {(0,80.28) (100,80.28)};
+\addplot[color=accblue, mark=*, mark size=1.5pt, line width=0.9pt] table[x=pct, y=top1, col sep=comma] {figs/data/acccomp_inception_v4.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=4.0cm, height=2.9cm, scale only axis,
+  title={Inception-ResNet-V2}, title style={font=\scriptsize},
+  xlabel={Taux d'élagage (\%)},
+  xmin=0, xmax=100,
+  ymin=68.98, ymax=81.8,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[dashed, black, thin] coordinates {(0,80.60) (100,80.60)};
+\addplot[color=accblue, mark=*, mark size=1.5pt, line width=0.9pt] table[x=pct, y=top1, col sep=comma] {figs/data/acccomp_inception_resnet_v2.csv};
+\end{axis}
+\end{tikzpicture}
+\end{tabular}}

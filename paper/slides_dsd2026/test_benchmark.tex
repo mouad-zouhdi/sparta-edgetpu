@@ -1,0 +1,83 @@
+\documentclass[svgnames,unknownkeysallowed]{beamer}
+\addtobeamertemplate{navigation symbols}{}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{pifont}
+\usepackage[figurename=]{caption}
+\usepackage{pgfplots}
+\usetikzlibrary{shapes.misc, positioning}
+\usetikzlibrary{automata,matrix,backgrounds,mindmap,shadows}
+\usepackage{tikz-er2}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{pgf,pgfarrows,pgfnodes,pgfautomata,pgfheaps,pgfshade,pgfplots,picture,booktabs,array,multirow,picture}
+\usetikzlibrary{arrows,fit,shapes,calc,patterns,calc,chains,positioning,shadows}
+\usetikzlibrary{arrows,snakes,backgrounds,shapes,patterns,shadows,positioning,decorations.text,decorations.pathmorphing,matrix,calc,automata}
+\usetikzlibrary{arrows}
+\usepackage[normalem]{ulem}
+\usepackage{pgfplots}
+\usepgfplotslibrary{colorbrewer,groupplots}
+\pgfplotsset{
+compat=1.13,
+cycle list/Set1-5,
+cycle list/Set2,
+cycle list/Set3
+}
+\usepackage{microtype}%if unwanted, comment out or use option "draft"
+\usepackage{graphicx}
+\definecolor{jungle}{RGB}{41,171,135}
+
+\usepackage{pgf-pie}  
+
+\usepackage{listings}
+\DeclareCaptionFont{white}{\color{white}}
+\DeclareCaptionFormat{listing}{\colorbox{gray}{\parbox{\textwidth}{#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white}
+
+
+\usepackage{rtsched}
+
+\input{python}
+
+\title[Dresden] % (optional, only for long titles)
+{Real-time scheduling of dynamic neural networks on multi-Edge TPU}
+\title[Dresden] % (optional, only for long titles)
+{Real-time scheduling of dynamic neural networks on multi-Edge TPU}
+%\subtitle{Systèmes temps réel embarqués}
+\author[Kłoda, Tomasz] % (optional, for multiple authors)
+{Mouad Zouhdi, Jiahe Guo, Rafik Hammadi, Binqi Sun, ...}
+\institute[Universities Here and There] % (optional)
+{	
+  LAAS-CNRS / Insa de Toulouse \\
+  Toulouse, France
+}
+\date[Dresden2024] % (optional)
+{Huawei 2012 Labs Global Software Technology Summit 2024\\\small Dresden 02.07.2024}
+\subject{DDN real-time multi-TPU scheduling}
+
+
+\AtBeginSection[]{
+	\begin{frame}[noframenumbering]
+		\vfill
+		\centering { \Huge
+		\begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+			\usebeamerfont{title}\insertsectionhead\par%
+		\end{beamercolorbox} }
+		\vfill
+	\end{frame}
+}
+
+
+\begin{document}
+\input{frames_benchmark}
+\end{document}

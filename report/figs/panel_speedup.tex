@@ -1,0 +1,242 @@
+% genere par make_panels.py, ne pas editer a la main
+\definecolor{impmagnitudel1}{HTML}{1F77B4}
+\definecolor{impmagnitudel2}{HTML}{AEC7E8}
+\definecolor{impbnscale}{HTML}{FF7F0E}
+\definecolor{impfpgm}{HTML}{2CA02C}
+\definecolor{imptaylor}{HTML}{D62728}
+\definecolor{impobdc}{HTML}{9467BD}
+\definecolor{imprandom}{HTML}{7F7F7F}
+
+\begin{tikzpicture}
+\begin{axis}[hide axis, scale only axis, width=1pt, height=1pt,
+  xmin=0, xmax=1, ymin=0, ymax=1,
+  legend columns=1, legend to name=leg:speedup,
+  legend style={draw=gray!50, font=\tiny,
+                /tikz/every even column/.append style={column sep=9pt}}]
+\addplot[draw=none, forget plot] coordinates {(0,0)};
+\addlegendimage{color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt}\addlegendentry{Magnitude L1}
+\addlegendimage{color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt}\addlegendentry{Magnitude L2}
+\addlegendimage{color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt}\addlegendentry{BN-Scale}
+\addlegendimage{color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt}\addlegendentry{FPGM}
+\addlegendimage{color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt}\addlegendentry{Taylor}
+\addlegendimage{color=impobdc, mark=pentagon, mark size=1.5pt, line width=0.8pt}\addlegendentry{OBD-C}
+\addlegendimage{color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt}\addlegendentry{Random}
+\addlegendimage{mark=none, dashed, black, thin}\addlegendentry{Référence non élaguée}
+\addlegendimage{mark=none, color=red!70!black, dash dot, thick}\addlegendentry{Passage sous 8\,Mio}
+\end{axis}
+\end{tikzpicture}
+
+\setlength{\tabcolsep}{0pt}
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{@{}cccc@{}}
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={ResNet-18}, ylabel={Accélération ($\times$)}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=impobdc, mark=pentagon, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=obdc_x, y=obdc_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet18.csv};
+
+\draw[red!70!black, dash dot, thick] ({axis cs:26.29,0}|-{rel axis cs:0,0}) -- ({axis cs:26.29,0}|-{rel axis cs:0,1});
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={7.71,26.17,44.63,63.08,81.54},
+  xticklabels={{10},{8},{6},{4},{2}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={ResNet-50}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=impobdc, mark=pentagon, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=obdc_x, y=obdc_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/resnet50.csv};
+
+\draw[red!70!black, dash dot, thick] ({axis cs:65.90,0}|-{rel axis cs:0,0}) -- ({axis cs:65.90,0}|-{rel axis cs:0,1});
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={14.16,35.62,57.08,78.54},
+  xticklabels={{20},{15},{10},{5}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={VGG-19}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/vgg19.csv};
+
+\draw[red!70!black, dash dot, thick] ({axis cs:58.76,0}|-{rel axis cs:0,0}) -- ({axis cs:58.76,0}|-{rel axis cs:0,1});
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={22.28,48.19,74.09},
+  xticklabels={{15},{10},{5}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={WRN-28-10}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=impobdc, mark=pentagon, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=obdc_x, y=obdc_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/wrn_28_10.csv};
+
+\draw[red!70!black, dash dot, thick] ({axis cs:77.49,0}|-{rel axis cs:0,0}) -- ({axis cs:77.49,0}|-{rel axis cs:0,1});
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={14.61,43.08,71.54},
+  xticklabels={{30},{20},{10}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture} \\[4pt]
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={MobileNetV2}, xlabel={Réduction (\%)}, ylabel={Accélération ($\times$)}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/mobilenetv2.csv};
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={7.44,25.95,44.47,62.98,81.49},
+  xticklabels={{2,5},{2},{1,5},{1},{0,5}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={GoogLeNet}, xlabel={Réduction (\%)}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=impbnscale, mark=diamond, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=bnscale_x, y=bnscale_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=impobdc, mark=pentagon, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=obdc_x, y=obdc_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/googlenet.csv};
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={11.65,29.32,46.99,64.66,82.33},
+  xticklabels={{5},{4},{3},{2},{1}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis, name=main, xmin=0, xmax=100, max space between ticks=34, title={SqueezeNet 1.1}, xlabel={Réduction (\%)}, grid=both, grid style={dashed,gray!30}, tick label style={font=\tiny}, label style={font=\tiny}, title style={font=\scriptsize, yshift=7pt}, ]
+\addplot[mark=none, domain=-2:95, samples=2, dashed, black, thin] {1};
+
+\addplot[color=impmagnitudel1, mark=o, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl1_x, y=magl1_y, col sep=comma] {plots/curves/data/speedup_vs_compression/squeezenet1_1.csv};
+
+\addplot[color=impmagnitudel2, mark=square, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=magl2_x, y=magl2_y, col sep=comma] {plots/curves/data/speedup_vs_compression/squeezenet1_1.csv};
+
+\addplot[color=impfpgm, mark=triangle, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=fpgm_x, y=fpgm_y, col sep=comma] {plots/curves/data/speedup_vs_compression/squeezenet1_1.csv};
+
+\addplot[color=imptaylor, mark=triangle*, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=taylor_x, y=taylor_y, col sep=comma] {plots/curves/data/speedup_vs_compression/squeezenet1_1.csv};
+
+\addplot[color=imprandom, mark=x, mark size=1.5pt, line width=0.8pt, unbounded coords=jump] table[x=random_x, y=random_y, col sep=comma] {plots/curves/data/speedup_vs_compression/squeezenet1_1.csv};
+
+\end{axis}
+\begin{axis}[width=3.9cm, height=3.0cm, scale only axis,
+  at=(main.south west), anchor=south west,
+  axis x line*=top, axis y line=none, hide y axis,
+  xmin=0, xmax=100, ymin=0, ymax=1,
+  xtick={3.98,27.98,51.99,75.99},
+  xticklabels={{0,8},{0,6},{0,4},{0,2}},
+  tick label style={font=\tiny},
+  ]
+\end{axis}
+\end{tikzpicture}
+  &
+  \raisebox{7.3mm}[0pt][0pt]{\hspace*{3.3mm}\ref{leg:speedup}}
+\end{tabular}}

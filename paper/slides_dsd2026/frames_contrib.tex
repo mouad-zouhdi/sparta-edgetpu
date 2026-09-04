@@ -1,0 +1,28 @@
+% =====================================================================
+%  Frame "Contributions" : a inserer juste apres la page de titre.
+%  Le texte donne l'ordre de grandeur de la campagne, pas la definition
+%  des contributions (dite a l'oral).
+% =====================================================================
+\begin{frame}
+\frametitle{Contributions}
+
+\begin{itemize}\setlength{\itemsep}{11pt}
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{A measurement study on the Edge TPU}\\[2pt]
+    {\small 7 architectures $\times$ 7 importance criteria $\times$ 9 compression
+     rates $=$ 441 pruning runs, 404 usable models.\\
+     Roughly two GPU-weeks of pruning and recovery fine-tuning; every model
+     then quantized, compiled and timed on the accelerator.}
+  \item[{\color{blue!80!black}$\bullet$}]
+    \textbf{Pruning as a scheduling knob}\\[2pt]
+    {\small A 0--1 integer linear program selecting one pruning rate per task,
+     solved by branch-and-bound under non-preemptive EDF.\\
+     Evaluated on 250 randomly generated task sets per utilization point.}
+\end{itemize}
+
+\vspace{0.4cm}
+\begin{center}
+{\small First half: the \textbf{benchmark}.\qquad Second half: the \textbf{scheduling}.}
+\end{center}
+
+\end{frame}

@@ -42,8 +42,12 @@ requirements/     one dependency set per environment, pinned
 mono_tpu/         single-accelerator pipeline (CIFAR-100)
 multi_tpu/        multi-accelerator pipeline (ImageNet)
   bench/          pipeline, parallel and cold-start benchmarks
+  bench/partition_grid/   the campaign the multi-accelerator results rest on
 synthetic/        factorial CNN generator
+report/           the internship report, its figures and their generators
+paper/            the DSD paper, the conference talk, the defence slides
 docs/             pitfalls, model catalogue, testing notes
+CLAUDE.md         what the project found, and what is easy to get wrong
 run_pipeline_mono_tpu.sh    runs the single-accelerator pipeline
 run_pipeline_multi_tpu.sh   runs the multi-accelerator pipeline
 ```
@@ -51,6 +55,16 @@ run_pipeline_multi_tpu.sh   runs the multi-accelerator pipeline
 Every script begins with a header describing what it produces and how it works,
 and every function has a docstring. Start with the header of the script you
 intend to run, or with `--help`.
+
+**`CLAUDE.md` is the place to start** if you want the findings rather than the
+code: the two-regime latency model and its measured constants, what the on-chip
+memory budget really is, the multi-accelerator deployment rule, how to read the
+published CSVs, and every trap met along the way.
+
+Two directories carry their comments in French rather than English:
+`report/generators/`, because the report is in French, and
+`multi_tpu/bench/partition_grid/`, whose scripts are published verbatim as the
+record of the campaign. Both have an English README.
 
 ---
 
@@ -273,7 +287,9 @@ produced file took that path.
 ## Models and measurements
 
 Every model measured with this framework, and every benchmark CSV, is published
-separately because the collection is about 37 GB. See `docs/MODELS.md`.
+separately because the collection is about 42 GB: 9459 files at
+[mouad-zouhdi/sparta-edgetpu-models](https://huggingface.co/mouad-zouhdi/sparta-edgetpu-models).
+See `docs/MODELS.md`.
 
 ```bash
 python setup/fetch_models.py --list                        # what is available

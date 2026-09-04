@@ -1,0 +1,17 @@
+% =====================================================================
+%  Page de titre : logos LAAS (haut gauche), TUM (haut droite),
+%  DSD (bas centre). Necessite deux passes de compilation
+%  (tikz remember picture).
+% =====================================================================
+\begin{frame}[plain,noframenumbering]
+\begin{tikzpicture}[remember picture, overlay]
+  \node[anchor=north west, xshift=0.8cm,  yshift=-0.6cm]
+       at (current page.north west) {\includegraphics[height=1.15cm]{LogoLAAS.png}};
+  \node[anchor=north east, xshift=-0.8cm, yshift=-0.6cm]
+       at (current page.north east) {\includegraphics[height=1.05cm]{TUM-logo.png}};
+  \node[anchor=south, yshift=0.55cm]
+       at (current page.south)      {\includegraphics[height=1.05cm]{bench/img/logo_dsd.png}};
+\end{tikzpicture}
+\vspace{0.4cm}
+\titlepage
+\end{frame}

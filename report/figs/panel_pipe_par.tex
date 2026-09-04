@@ -1,0 +1,133 @@
+% genere par make_pipepar.py, ne pas editer a la main
+\definecolor{regpipeline}{HTML}{2A78D6}
+\definecolor{regparallel}{HTML}{EB6834}
+
+\begin{tikzpicture}
+\begin{axis}[hide axis, scale only axis, width=1pt, height=1pt,
+  xmin=0, xmax=1, ymin=0, ymax=1,
+  legend columns=2, legend to name=leg:pipepar,
+  legend style={draw=gray!50, font=\scriptsize, column sep=8pt}]
+\addplot[draw=none, forget plot] coordinates {(0,0)};
+\addlegendimage{color=regparallel, mark=*, mark size=1.4pt, line width=0.8pt}\addlegendentry{Parallélisme : $N$ instances d'un étage}
+\addlegendimage{color=regpipeline, mark=square*, mark size=1.4pt, line width=0.8pt}\addlegendentry{Pipeline : une instance de $N$ étages}
+\end{axis}
+\end{tikzpicture}
+
+\setlength{\tabcolsep}{0pt}
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{@{}cccc@{}}
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  title={\shortstack{Inception-V3, 84~\%\\loge sur 1 accélérateur}}, title style={font=\tiny, align=center},
+  ylabel={Débit cumulé (im/s)},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_fps, col sep=comma] {figs/data/pipepar_inception_v3_wave_84.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_fps, col sep=comma] {figs/data/pipepar_inception_v3_wave_84.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  title={\shortstack{Inception-V4, 70~\%\\loge sur 3 accélérateurs}}, title style={font=\tiny, align=center},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_fps, col sep=comma] {figs/data/pipepar_inception_v4_sweepN_70.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_fps, col sep=comma] {figs/data/pipepar_inception_v4_sweepN_70.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  title={\shortstack{ResNet-101, 43~\%\\loge sur 4 accélérateurs}}, title style={font=\tiny, align=center},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_fps, col sep=comma] {figs/data/pipepar_resnet101_sweepN_43.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_fps, col sep=comma] {figs/data/pipepar_resnet101_sweepN_43.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  title={\shortstack{ResNet-152 non élagué\\ne loge pas sur huit}}, title style={font=\tiny, align=center},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_fps, col sep=comma] {figs/data/pipepar_resnet152_baseline_0.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_fps, col sep=comma] {figs/data/pipepar_resnet152_baseline_0.csv};
+\end{axis}
+\end{tikzpicture} \\[3pt]
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  ylabel={Latence (ms)},
+  xlabel={Accélérateurs},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_lat, col sep=comma] {figs/data/pipepar_inception_v3_wave_84.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_lat, col sep=comma] {figs/data/pipepar_inception_v3_wave_84.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  xlabel={Accélérateurs},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_lat, col sep=comma] {figs/data/pipepar_inception_v4_sweepN_70.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_lat, col sep=comma] {figs/data/pipepar_inception_v4_sweepN_70.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  xlabel={Accélérateurs},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_lat, col sep=comma] {figs/data/pipepar_resnet101_sweepN_43.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_lat, col sep=comma] {figs/data/pipepar_resnet101_sweepN_43.csv};
+\end{axis}
+\end{tikzpicture}
+  &
+  \begin{tikzpicture}
+\begin{axis}[width=3.5cm, height=2.9cm, scale only axis,
+  xlabel={Accélérateurs},
+  ymin=0,
+  xmin=0.5, xmax=8.5, xtick={2,4,6,8},
+  scaled y ticks=false, y tick label style={/pgf/number format/1000 sep={}},
+  max space between ticks=26,
+  grid=both, grid style={dashed,gray!30},
+  tick label style={font=\tiny}, label style={font=\tiny}]
+\addplot[color=regparallel, mark=*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=par_lat, col sep=comma] {figs/data/pipepar_resnet152_baseline_0.csv};
+\addplot[color=regpipeline, mark=square*, mark size=1.2pt, line width=0.7pt, unbounded coords=discard] table[x=n, y=pipe_lat, col sep=comma] {figs/data/pipepar_resnet152_baseline_0.csv};
+\end{axis}
+\end{tikzpicture}
+\end{tabular}}
+\vspace{4pt}
+\noindent\makebox[\linewidth][c]{\ref{leg:pipepar}}
